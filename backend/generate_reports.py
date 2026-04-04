@@ -14,13 +14,18 @@ from pathlib import Path
 ROOT = Path(__file__).parent
 OUTPUT_DIR = ROOT / "output"
 
-# API keys to rotate (free tier, 5 RPM each)
-API_KEYS = [
-    "AIzaSyAu5b6DScCd2x-KMv4kl88uEXJlltVw6WM",
-    "AIzaSyAeW5k5qiD3C6vy5ojppmpUpll0W6KLYMY",
-    "AIzaSyAnsPL7uEz6i_PuJAU6xoq9z8nDM-BwXrk",
-    "AIzaSyDillXU2EzEcHanFbPFY3AWrTIuchDL1W8",
-]
+import os
+
+def _load_api_keys():
+    keys_str = os.environ.get("GEMINI_API_KEYS", "")
+    if keys_str:
+        return [k.strip() for k in keys_str.split(",") if k.strip()]
+    single = os.environ.get("GRAPHRAG_API_KEY", "")
+    if single:
+        return [single]
+    return ["YOUR_API_KEY_HERE"]
+
+API_KEYS = _load_api_keys()
 
 MODEL = "gemini-2.5-flash"
 

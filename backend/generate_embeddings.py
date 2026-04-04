@@ -17,15 +17,18 @@ from pathlib import Path
 ROOT = Path(__file__).parent
 OUTPUT_DIR = ROOT / "output"
 
-# 6 free keys — embedding API has higher rate limits than completion
-API_KEYS = [
-    "AIzaSyAu5b6DScCd2x-KMv4kl88uEXJlltVw6WM",
-    "AIzaSyAeW5k5qiD3C6vy5ojppmpUpll0W6KLYMY",
-    "AIzaSyAnsPL7uEz6i_PuJAU6xoq9z8nDM-BwXrk",
-    "AIzaSyDillXU2EzEcHanFbPFY3AWrTIuchDL1W8",
-    "AIzaSyA2vt4reAGSLWL7yKFdKnn2cEBvRNEdwMw",
-    "AIzaSyCkIHCzbs0KES_A9nS505AMP7AN4jfzNC4",
-]
+import os
+
+def _load_api_keys():
+    keys_str = os.environ.get("GEMINI_API_KEYS", "")
+    if keys_str:
+        return [k.strip() for k in keys_str.split(",") if k.strip()]
+    single = os.environ.get("GRAPHRAG_API_KEY", "")
+    if single:
+        return [single]
+    return ["YOUR_API_KEY_HERE"]
+
+API_KEYS = _load_api_keys()
 
 MODEL = "gemini-embedding-001"
 BATCH_SIZE = 10  # Gemini supports batch embedding

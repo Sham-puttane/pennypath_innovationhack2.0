@@ -14,9 +14,15 @@ Endpoints:
 """
 
 import sys
+import os
 import json
+from pathlib import Path
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+
+# Load .env file for API keys
+from dotenv import load_dotenv
+load_dotenv(Path(__file__).parent / ".env")
 
 from query_graph import GraphQuery
 from foo_engine import order_actions

@@ -11,15 +11,16 @@ import time
 import subprocess
 import itertools
 
-# 6 free keys to rotate
-API_KEYS = [
-    "AIzaSyAu5b6DScCd2x-KMv4kl88uEXJlltVw6WM",
-    "AIzaSyAeW5k5qiD3C6vy5ojppmpUpll0W6KLYMY",
-    "AIzaSyAnsPL7uEz6i_PuJAU6xoq9z8nDM-BwXrk",
-    "AIzaSyDillXU2EzEcHanFbPFY3AWrTIuchDL1W8",
-    "AIzaSyA2vt4reAGSLWL7yKFdKnn2cEBvRNEdwMw",
-    "AIzaSyCkIHCzbs0KES_A9nS505AMP7AN4jfzNC4",
-]
+def _load_api_keys():
+    keys_str = os.environ.get("GEMINI_API_KEYS", "")
+    if keys_str:
+        return [k.strip() for k in keys_str.split(",") if k.strip()]
+    single = os.environ.get("GRAPHRAG_API_KEY", "")
+    if single:
+        return [single]
+    return ["YOUR_API_KEY_HERE"]
+
+API_KEYS = _load_api_keys()
 
 MAX_CYCLES = 10  # max retry cycles before giving up
 WAIT_BETWEEN = 30  # seconds between cycles

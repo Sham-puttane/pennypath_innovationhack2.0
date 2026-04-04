@@ -16,14 +16,19 @@ import json
 import re
 import requests
 
-API_KEYS = [
-    "AIzaSyDn1tTJ7cuiWyG5ksBH91iIfFKF46QYQ_0",
-    "AIzaSyAeW5k5qiD3C6vy5ojppmpUpll0W6KLYMY",
-    "AIzaSyAnsPL7uEz6i_PuJAU6xoq9z8nDM-BwXrk",
-    "AIzaSyDillXU2EzEcHanFbPFY3AWrTIuchDL1W8",
-    "AIzaSyA2vt4reAGSLWL7yKFdKnn2cEBvRNEdwMw",
-    "AIzaSyCkIHCzbs0KES_A9nS505AMP7AN4jfzNC4",
-]
+import os
+
+def _load_api_keys():
+    """Load API keys from environment. Set GEMINI_API_KEYS as comma-separated list, or GRAPHRAG_API_KEY for a single key."""
+    keys_str = os.environ.get("GEMINI_API_KEYS", "")
+    if keys_str:
+        return [k.strip() for k in keys_str.split(",") if k.strip()]
+    single = os.environ.get("GRAPHRAG_API_KEY", "")
+    if single:
+        return [single]
+    return ["YOUR_API_KEY_HERE"]
+
+API_KEYS = _load_api_keys()
 
 MODEL = "gemini-2.5-flash"
 
