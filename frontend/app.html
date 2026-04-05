@@ -30,6 +30,13 @@ body{font-family:'Inter',sans-serif;background:#0a0a0a;color:#fff;overflow-x:hid
 .step-card{background:#0e0e0e;border:1px solid #1a1a1a;border-radius:12px;padding:14px;cursor:pointer;transition:all .3s}
 .step-card:hover{border-color:#333;transform:translateY(-1px)}
 .step-card.highlight{border-color:#9333ea;box-shadow:0 0 20px rgba(147,51,234,.15)}
+.step-card.new-step{border-color:#22c55e;background:rgba(34,197,94,.05)}
+.step-card.removed-step{border-color:#ef4444;background:rgba(239,68,68,.05);opacity:.5;text-decoration:line-through}
+.step-card.moved-step{border-color:#eab308;background:rgba(234,179,8,.04)}
+.diff-badge{display:inline-block;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;margin-left:6px;vertical-align:middle}
+.diff-new{background:rgba(34,197,94,.15);color:#22c55e;border:1px solid rgba(34,197,94,.3)}
+.diff-removed{background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3)}
+.diff-moved{background:rgba(234,179,8,.15);color:#eab308;border:1px solid rgba(234,179,8,.3)}
 .chip{display:inline-flex;align-items:center;padding:5px 12px;border-radius:8px;font-size:12px;font-weight:500;background:rgba(147,51,234,.1);border:1px solid rgba(147,51,234,.2);color:#ccc}
 .wif{padding:8px 14px;border-radius:8px;font-size:12px;background:#111;border:1px solid #1a1a1a;cursor:pointer;transition:all .25s;color:#999}
 .wif:hover{border-color:#333;color:#fff}
@@ -664,28 +671,88 @@ ${(s.source_nodes||[]).length?`<p class="mt-1"><span class="text-[#555]">Nodes:<
 }
 }
 
+let baseSteps=null; // original steps before any what-if
+
 async function runWif(scenario,btn){
 document.querySelectorAll('.wif').forEach(b=>b.classList.remove('active'));
 btn.classList.add('active');
+
+// Save base steps on first what-if
+if(!baseSteps)baseSteps=DATA.steps.map(s=>({...s}));
+
 try{
 const r=await fetch(API+'/api/whatif',{method:'POST',headers:{'Content-Type':'application/json'},
 body:JSON.stringify({session_id:'default',scenario})});
 const d=await r.json();
+
+// Compute diff against base steps
+const baseActions=new Set(baseSteps.map(s=>s.action));
+const baseOrder={};baseSteps.forEach(s=>{baseOrder[s.action]=s.step_number});
+const newActions=new Set(d.steps.map(s=>s.action));
+
 const sb=document.getElementById('stepsBox');sb.innerHTML='';
+
+// Show scenario label
+const label=document.createElement('div');
+label.className='mb-4 p-3 rounded-lg text-xs font-medium text-center fade-in';
+label.style.cssText='background:rgba(147,51,234,.08);border:1px solid rgba(147,51,234,.2);color:#a855f7';
+label.innerHTML=`Showing: <strong>${d.scenario_label||scenario.replace(/_/g,' ')}</strong> <button onclick="resetToBase()" class="ml-3 underline opacity-70 hover:opacity-100">Back to my plan</button>`;
+sb.appendChild(label);
+
+// Show removed steps first
+baseSteps.forEach(bs=>{
+if(!newActions.has(bs.action)){
+const div=document.createElement('div');div.className='step-card fade-in removed-step';
+div.innerHTML=`<div class="flex items-center gap-3">
+<div class="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold" style="background:#ef444420;color:#ef4444">-</div>
+<div class="flex-1"><p class="text-sm font-semibold truncate">${bs.action}</p></div>
+<span class="diff-badge diff-removed">REMOVED</span>
+</div>`;
+sb.appendChild(div);
+}
+});
+
 const tc={access:'#9333ea',stop_bleeding:'#ef4444',safety_net:'#22c55e',protection:'#f59e0b',build:'#3b82f6',grow:'#14b8a6'};
 d.steps.forEach((s,i)=>{
+const isNew=!baseActions.has(s.action);
+const oldPos=baseOrder[s.action];
+const moved=oldPos&&oldPos!==s.step_number;
+const diffClass=isNew?' new-step':moved?' moved-step':'';
+const diffBadge=isNew?'<span class="diff-badge diff-new">NEW</span>':
+moved?`<span class="diff-badge diff-moved">${oldPos<s.step_number?'\u2193':'\u2191'} was #${oldPos}</span>`:'';
+
+const div=document.createElement('div');div.className='step-card fade-in'+diffClass;
+div.style.animationDelay=(i*50)+'ms';div.dataset.idx=i;div.dataset.nodes=JSON.stringify(s.source_nodes||[]);
+div.onclick=()=>hlStep(i);const c=tc[s.tier]||'#666';
+div.innerHTML=`<div class="flex items-start gap-3">
+<div class="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold" style="background:${c}20;color:${c}">${s.step_number}</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-1"><p class="text-sm font-semibold truncate">${s.action}</p>${diffBadge}
+${s.is_state_farm?'<span class="text-[8px] font-bold bg-accent px-1.5 py-0.5 rounded-full shrink-0">State Farm</span>':''}</div>
+<p class="text-xs text-[#666] mt-1 line-clamp-2">${s.reason}</p></div></div>`;
+sb.appendChild(div);
+});
+DATA.steps=d.steps;
+}catch(e){console.error(e)}
+}
+
+function resetToBase(){
+if(!baseSteps)return;
+DATA.steps=baseSteps;
+document.querySelectorAll('.wif').forEach(b=>b.classList.remove('active'));
+// Re-render original steps
+const sb=document.getElementById('stepsBox');sb.innerHTML='';
+const tc={access:'#9333ea',stop_bleeding:'#ef4444',safety_net:'#22c55e',protection:'#f59e0b',build:'#3b82f6',grow:'#14b8a6'};
+baseSteps.forEach((s,i)=>{
 const div=document.createElement('div');div.className='step-card fade-in';
 div.style.animationDelay=(i*50)+'ms';div.dataset.idx=i;div.dataset.nodes=JSON.stringify(s.source_nodes||[]);
 div.onclick=()=>hlStep(i);const c=tc[s.tier]||'#666';
 div.innerHTML=`<div class="flex items-start gap-3"><div class="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold" style="background:${c}20;color:${c}">${s.step_number}</div>
-<div class="flex-1 min-w-0"><p class="text-sm font-semibold truncate">${s.action}</p>
-${s.is_state_farm?'<span class="text-[8px] font-bold bg-accent px-1.5 py-0.5 rounded-full">State Farm</span>':''}
-<p class="text-xs text-[#666] mt-1 line-clamp-2">${s.reason}</p></div></div>`;
+<div class="flex-1 min-w-0"><p class="text-sm font-semibold truncate">${s.personalized_action||s.action}</p>
+${s.is_state_farm?'<span class="text-[8px] font-bold bg-accent px-1.5 py-0.5 rounded-full shrink-0">State Farm</span>':''}
+<p class="text-xs text-[#666] mt-1 line-clamp-2">${s.personalized_reason||s.reason}</p></div></div>`;
 sb.appendChild(div);
 });
-// Update DATA steps for interaction
-DATA.steps=d.steps;
-}catch(e){console.error(e)}
 }
 
 // ─── Demo fallback ──────────────────────────────────────────────
