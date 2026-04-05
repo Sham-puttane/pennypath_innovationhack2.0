@@ -159,8 +159,22 @@ body{font-family:'Inter',sans-serif;background:#0a0a0a;color:#fff;overflow-x:hid
 </div>
 </div></div>
 
-<!-- Step 5: Q5 -->
+<!-- Step 5: Q5a - What do you own/use? -->
 <div class="step-page hidden" data-step="5"><div class="q-card-wrap">
+<label class="block text-base font-semibold mb-2 text-center">What applies to your situation?</label>
+<p class="text-[#666] text-xs text-center mb-5">Select all that apply, then tap Next</p>
+<div class="space-y-3" id="q5ag">
+<label class="opt" onclick="chkAssets(this,'rents')"><span class="chk"></span>I rent my home (apartment, house, room)</label>
+<label class="opt" onclick="chkAssets(this,'owns_home')"><span class="chk"></span>I own my home</label>
+<label class="opt" onclick="chkAssets(this,'has_car')"><span class="chk"></span>I own or regularly drive a car</label>
+<label class="opt" onclick="chkAssets(this,'has_dependents')"><span class="chk"></span>Others depend on my income (kids, spouse, parents)</label>
+<label class="opt" onclick="chkAssets(this,'none_above')"><span class="chk"></span>None of the above</label>
+</div>
+<button onclick="goStep(6)" class="w-full mt-5 py-3 rounded-xl text-sm font-semibold bg-accent text-white hover:bg-accent-light transition" style="box-shadow:0 0 20px rgba(147,51,234,.2)">Next &rarr;</button>
+</div></div>
+
+<!-- Step 6: Q5b - Insurance -->
+<div class="step-page hidden" data-step="6"><div class="q-card-wrap">
 <label class="block text-base font-semibold mb-2 text-center">Do you have insurance?</label>
 <p class="text-[#666] text-xs text-center mb-5">Select all that apply, then tap Next</p>
 <div class="space-y-3" id="q5g">
@@ -170,11 +184,11 @@ body{font-family:'Inter',sans-serif;background:#0a0a0a;color:#fff;overflow-x:hid
 <label class="opt" onclick="chk(this,'life')"><span class="chk"></span>Life</label>
 <label class="opt" onclick="chk(this,'none')"><span class="chk"></span>None of the above</label>
 </div>
-<button onclick="goStep(6)" class="w-full mt-5 py-3 rounded-xl text-sm font-semibold bg-accent text-white hover:bg-accent-light transition" style="box-shadow:0 0 20px rgba(147,51,234,.2)">Next &rarr;</button>
+<button onclick="goStep(7)" class="w-full mt-5 py-3 rounded-xl text-sm font-semibold bg-accent text-white hover:bg-accent-light transition" style="box-shadow:0 0 20px rgba(147,51,234,.2)">Next &rarr;</button>
 </div></div>
 
-<!-- Step 6: Q6 + Submit -->
-<div class="step-page hidden" data-step="6"><div class="q-card-wrap">
+<!-- Step 7: Q6 + Submit -->
+<div class="step-page hidden" data-step="7"><div class="q-card-wrap">
 <label class="block text-base font-semibold mb-2 text-center">What's your biggest financial fear?</label>
 <p class="text-[#666] text-xs text-center mb-5">Optional — helps us personalize your plan</p>
 <textarea id="q6" rows="4" placeholder="e.g. I am scared I will never own a home" class="w-full bg-[#0e0e0e] border border-[#1a1a1a] rounded-xl px-4 py-3 text-sm placeholder-[#444] focus:border-accent focus:outline-none transition resize-none mb-6"></textarea>
@@ -198,9 +212,10 @@ body{font-family:'Inter',sans-serif;background:#0a0a0a;color:#fff;overflow-x:hid
 <div class="prog-seg"></div>
 <div class="prog-seg"></div>
 <div class="prog-seg"></div>
+<div class="prog-seg"></div>
 </div>
 <div class="flex justify-between mt-2 text-[10px] text-[#555]">
-<span>You</span><span>Bank</span><span>Income</span><span>Debt</span><span>Savings</span><span>Insurance</span><span>Fear</span>
+<span>You</span><span>Bank</span><span>Income</span><span>Debt</span><span>Savings</span><span>Situation</span><span>Insurance</span><span>Fear</span>
 </div>
 </div>
 
@@ -274,10 +289,10 @@ body{font-family:'Inter',sans-serif;background:#0a0a0a;color:#fff;overflow-x:hid
 
 <script>
 const API='http://localhost:5000';
-const A={persona:[],q1:null,q2:null,q3:[],q4:null,q5:[],q6:''};
+const A={persona:[],q1:null,q2:null,q3:[],q4:null,assets:[],q5:[],q6:''};
 let DATA=null,NET=null,NET2=null;
 let curStep=0;
-const TOTAL_STEPS=7;
+const TOTAL_STEPS=8;
 const CM={purple:'#9333ea',red:'#ef4444',green:'#22c55e',amber:'#eab308',info:'#9333ea',gray:'#666'};
 const CLABEL={purple:'Entry',red:'Risk',green:'Action',amber:'Resource',info:'Entry',gray:'Other'};
 
@@ -328,6 +343,14 @@ if(el.classList.contains('selected')){if(!A.persona.includes(v))A.persona.push(v
 else{A.persona=A.persona.filter(x=>x!==v)}
 }
 
+// Assets/situation multi-select
+function chkAssets(el,v){
+el.classList.toggle('selected');
+if(v==='none_above'){A.assets=['none_above'];document.querySelectorAll('#q5ag .opt').forEach(o=>o.classList.remove('selected'));el.classList.add('selected')}
+else{document.querySelector('#q5ag .opt:last-child').classList.remove('selected');A.assets=A.assets.filter(x=>x!=='none_above');
+if(el.classList.contains('selected')){if(!A.assets.includes(v))A.assets.push(v)}else{A.assets=A.assets.filter(x=>x!==v)}}
+}
+
 // Debt multi-select
 function chkDebt(el,v){
 el.classList.toggle('selected');
@@ -365,7 +388,7 @@ window.scrollTo({top:0,behavior:'smooth'});
 // Fetch data from backend
 try{
 const r=await fetch(API+'/api/query',{method:'POST',headers:{'Content-Type':'application/json'},
-body:JSON.stringify({q1:A.q1,q2:A.q2,q3:A.q3.length>1?'multiple':A.q3[0]||'none',q4:A.q4,q5:A.q5,q6:A.q6,persona_tags:A.persona,skip_personalize:true})});
+body:JSON.stringify({q1:A.q1,q2:A.q2,q3:A.q3.length>1?'multiple':A.q3[0]||'none',q4:A.q4,q5:A.q5,q6:A.q6,assets:A.assets,persona_tags:A.persona,skip_personalize:true})});
 DATA=await r.json();
 }catch(e){DATA=demoDB()}
 

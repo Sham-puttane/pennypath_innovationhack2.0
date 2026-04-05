@@ -43,6 +43,22 @@ def order_actions(result: dict) -> list[dict]:
     resource_nodes = result["resource_nodes"]
     entry_nodes = result["entry_nodes"]
     concept_nodes = result.get("concept_nodes", [])
+    assets = result.get("assets", [])
+
+    # Filter insurance gaps based on what the user actually owns/uses
+    # Only recommend insurance that's relevant to their situation
+    if assets:
+        relevant_gaps = []
+        for gap in protection_gaps:
+            if gap == "renters" and ("rents" in assets or not assets or "none_above" in assets):
+                relevant_gaps.append(gap)  # renters insurance if they rent
+            elif gap == "auto" and "has_car" in assets:
+                relevant_gaps.append(gap)  # auto insurance only if they have a car
+            elif gap == "life" and "has_dependents" in assets:
+                relevant_gaps.append(gap)  # life insurance only if others depend on them
+            elif gap == "health":
+                relevant_gaps.append(gap)  # health insurance always relevant
+        protection_gaps = relevant_gaps
 
     steps = []
     has_bank = profile["has_bank_account"] != "no"

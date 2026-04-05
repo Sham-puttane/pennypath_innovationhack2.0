@@ -249,7 +249,9 @@ def query():
         "args": args,
     }
 
-    # Step 2: FOO ordering
+    # Step 2: FOO ordering (pass assets for insurance filtering)
+    assets = data.get("assets", [])
+    traversal["assets"] = assets
     steps = order_actions(traversal)
 
     # Step 3: Gemini personalization
