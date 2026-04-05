@@ -1,4 +1,4 @@
-# First Dollar — Handover to Person 1 (Frontend)
+# PennyPath — Handover to Person 1 (Frontend)
 
 ## What's Done
 

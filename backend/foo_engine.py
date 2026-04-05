@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-First Dollar — Financial Order of Operations (FOO) Rule Engine
+PennyPath — Financial Order of Operations (FOO) Rule Engine
 
 Implements all 10 FOO rules from the brief exactly:
   Rule 1:  No bank account -> Step 1 always

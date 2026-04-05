@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-First Dollar — Gemini Personalization Layer
+PennyPath — Gemini Personalization Layer
 
 Single LLM call per session. Takes FOO-ordered steps and rewrites
 the action labels to be warm, personal, and specific to the user.

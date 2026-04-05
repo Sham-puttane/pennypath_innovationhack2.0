@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-First Dollar — Generate Community Report Summaries
+PennyPath — Generate Community Report Summaries
 Makes 21 LLM calls to Gemini to create narrative summaries of each community.
 These are used for graph visualization tooltips and global search context.
 """

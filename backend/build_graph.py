@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-First Dollar — Build Knowledge Graph from Cached Extractions
+PennyPath — Build Knowledge Graph from Cached Extractions
 Bypasses LLM summarization by directly constructing the graph
 from GraphRAG's cached entity extraction results.
 
@@ -188,7 +188,7 @@ def detect_communities(G: nx.Graph) -> list[dict]:
 
 def main():
     print("=" * 60)
-    print("  First Dollar — Building Knowledge Graph")
+    print("  PennyPath — Building Knowledge Graph")
     print("=" * 60)
 
     # Step 1: Parse cache

@@ -1,12 +1,12 @@
 @echo off
 REM ═══════════════════════════════════════════════════════════════════
-REM First Dollar — Windows Quick Fix Script
+REM PennyPath — Windows Quick Fix Script
 REM Run this from the backend/ directory
 REM ═══════════════════════════════════════════════════════════════════
 
 echo.
 echo ══════════════════════════════════════════════════════════════
-echo  First Dollar — Setup Fix for Windows
+echo  PennyPath — Setup Fix for Windows
 echo ══════════════════════════════════════════════════════════════
 echo.
 

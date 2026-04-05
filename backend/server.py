@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-First Dollar — Backend API Server
+PennyPath — Backend API Server
 
 Chains: query_graph -> foo_engine -> personalize -> JSON response
 
@@ -379,7 +379,7 @@ def node(name):
 # ─── Main ────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    print("\n  First Dollar API Server")
+    print("\n  PennyPath API Server")
     print("  http://localhost:5000")
     print("  Endpoints:")
     print("    POST /api/query            — Full pipeline")

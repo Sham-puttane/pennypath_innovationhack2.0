@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-First Dollar — Generate Entity Embeddings
+PennyPath — Generate Entity Embeddings
 Embeds all 4,194 entities using Gemini embedding API with 6-key rotation.
 Used for Q6 semantic search in query_graph.py.
 

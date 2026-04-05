@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-First Dollar — Data Ingestion Pipeline (Person 2)
+PennyPath — Data Ingestion Pipeline (Person 2)
 Downloads 6 verified financial data sources, extracts text, saves to input/ for GraphRAG indexing.
 
 Sources:
@@ -322,7 +322,7 @@ def validate_text(text: str, source_name: str) -> bool:
 
 def main():
     print("=" * 70)
-    print("  First Dollar — Data Ingestion Pipeline")
+    print("  PennyPath — Data Ingestion Pipeline")
     print("=" * 70)
 
     INPUT_DIR.mkdir(exist_ok=True)

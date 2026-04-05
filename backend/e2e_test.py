@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-First Dollar — End-to-End Test as a Real User
+PennyPath — End-to-End Test as a Real User
 Simulates the full pipeline from intake form to final output.
 No hardcoded answers — tests the actual system.
 """

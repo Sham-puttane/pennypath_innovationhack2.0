@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-First Dollar — Knowledge Graph Query API
+PennyPath — Knowledge Graph Query API
 Maps user intake answers (Q1-Q5) to graph entry nodes,
 traverses relationships, and returns structured results
 for the FOO engine and frontend visualization.
@@ -156,7 +156,7 @@ PERSONA_ENTITY_CLUSTERS = {
 
 
 class GraphQuery:
-    """Query interface for the First Dollar knowledge graph."""
+    """Query interface for the PennyPath knowledge graph."""
 
     def __init__(self, output_dir: Path = OUTPUT_DIR):
         self.output_dir = output_dir
