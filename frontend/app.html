@@ -119,7 +119,15 @@ body{font-family:'Inter',sans-serif;background:#0a0a0a;color:#fff;overflow-x:hid
 <h2 class="font-serif text-2xl font-bold">Discovering your path...</h2>
 <p class="text-[#555] text-sm mt-1" id="traversalStatus">Traversing knowledge graph</p>
 </div>
-<div id="graphContainer" class="rounded-xl border border-[#1a1a1a] bg-[#060606] mx-auto" style="height:75vh;max-height:700px"></div>
+<div id="graphContainer" class="rounded-xl border border-[#1a1a1a] bg-[#060606] mx-auto" style="height:70vh;max-height:650px"></div>
+<!-- Reasoning breadcrumb trail -->
+<div class="mt-4 p-4 rounded-xl bg-[#0a0a0a] border border-[#1a1a1a]">
+<div class="flex items-center gap-2 mb-2">
+<div class="w-2 h-2 rounded-full bg-accent animate-pulse"></div>
+<p class="text-[11px] text-[#555] font-semibold uppercase tracking-wider">Reasoning Path</p>
+</div>
+<div id="breadcrumb" class="flex items-center gap-1 min-h-[28px] text-xs overflow-x-auto pb-1" style="scrollbar-width:thin"></div>
+</div>
 <div class="flex items-center justify-center gap-5 mt-3 text-[10px] text-[#555]">
 <span><span class="legend-dot" style="background:#9333ea"></span> Entry</span>
 <span><span class="legend-dot" style="background:#ef4444"></span> Risk</span>
@@ -246,9 +254,11 @@ setTimeout(startAnim,3000);
 
 function runTraversalAnimation(nodes,edges,steps){
 const statusEl=document.getElementById('traversalStatus');
+const bcEl=document.getElementById('breadcrumb');
 const visited=new Set();
+const visitedEdges=new Set();
 
-// Collect entry nodes (from step source_nodes, first 2 steps typically = entry)
+// Collect entry nodes
 const entryNodes=[];
 const allTraversalNodes=[];
 steps.forEach((s,i)=>{
@@ -258,7 +268,7 @@ if(i<2&&!entryNodes.includes(n)&&nodes.get(n))entryNodes.push(n);
 });
 });
 
-// Build step-to-nodes mapping for hop sequence
+// Build hop sequence
 const hopSequence=[];
 steps.forEach(s=>{
 const stepNodes=(s.source_nodes||[]).filter(n=>nodes.get(n));
@@ -266,120 +276,159 @@ if(stepNodes.length)hopSequence.push({step:s,nodes:stepNodes});
 });
 
 const totalHops=hopSequence.length;
-const hopDelay=Math.max(500,Math.min(900,8000/Math.max(totalHops,1)));
+const hopDelay=Math.max(600,Math.min(1000,9000/Math.max(totalHops,1)));
 
-// ─── PHASE A: Highlight entry nodes (2s) ────────────────────
+// Helper: add node to breadcrumb trail
+function addBreadcrumb(nid,color,isArrow){
+if(isArrow){
+const arrow=document.createElement('span');
+arrow.textContent='\u2192';
+arrow.className='text-[#444]';
+bcEl.appendChild(arrow);
+}
+const chip=document.createElement('span');
+chip.textContent=nid.length>22?nid.substring(0,20)+'..':nid;
+chip.className='px-2 py-0.5 rounded text-[10px] font-semibold transition-all duration-300';
+chip.style.background=color+'25';
+chip.style.color=color;
+chip.style.border='1px solid '+color+'40';
+chip.style.animation='fadeIn .3s ease both';
+bcEl.appendChild(chip);
+// Auto-scroll breadcrumb
+bcEl.scrollLeft=bcEl.scrollWidth;
+}
+
+// ─── PHASE A: Entry nodes ────────────────────────────────────
 statusEl.textContent='Identifying your profile...';
+bcEl.innerHTML='';
 let entryIdx=0;
 function showEntry(){
-if(entryIdx>=entryNodes.length){
-setTimeout(startHops,800);
-return;
-}
+if(entryIdx>=entryNodes.length){setTimeout(startHops,600);return}
 const nid=entryNodes[entryIdx];
 const nd=nodes.get(nid);
 if(nd){
 nodes.update({id:nid,
-size:nd._baseSize*2.5,
+size:nd._baseSize*3,
 color:{background:nd._origColor,border:'#fff'},
-font:{color:'#fff',size:12,bold:true},
+font:{color:'#fff',size:14,bold:{toString:()=>'true'}},
 borderWidth:3,
-shadow:{enabled:true,color:nd._origColor+'60',size:25}
+shadow:{enabled:true,color:nd._origColor+'70',size:30}
 });
 visited.add(nid);
+addBreadcrumb(nid,nd._origColor,entryIdx>0);
 }
 entryIdx++;
-setTimeout(showEntry,350);
+setTimeout(showEntry,400);
 }
-setTimeout(showEntry,600);
+setTimeout(showEntry,500);
 
-// ─── PHASE B: Hop through each step's nodes ─────────────────
+// ─── PHASE B: Hop-by-hop ─────────────────────────────────────
 let hopIdx=0;
-let prevActiveNodes=[];
+let prevActive=[];
 
 function startHops(){hopNext()}
 
 function hopNext(){
 if(hopIdx>=hopSequence.length){
 statusEl.textContent='Path discovered. Building your queue...';
-// Settle all nodes to final state
-allTraversalNodes.forEach(nid=>{
+// ─── PHASE C: Focus view — hide non-traversed nodes ──────
+setTimeout(()=>{
+// Hide all non-traversed nodes
+nodes.forEach(n=>{
+if(!visited.has(n.id)){
+nodes.update({id:n.id,hidden:true});
+}
+});
+// Hide non-traversed edges
+edges.forEach(e=>{
+if(!visitedEdges.has(e.id)){
+edges.update({id:e.id,hidden:true});
+}
+});
+// Settle traversed nodes to clean final state
+visited.forEach(nid=>{
 const nd=nodes.get(nid);
 if(nd){
 nodes.update({id:nid,
-size:nd._baseSize*1.5,
-color:{background:nd._origColor,border:'rgba(255,255,255,.2)'},
-font:{color:'#bbb',size:10},
-borderWidth:1,
-shadow:{enabled:true,color:nd._origColor+'30',size:10}
+size:nd._baseSize*2,
+color:{background:nd._origColor,border:nd._origColor},
+font:{color:'#eee',size:11},
+borderWidth:2,
+shadow:{enabled:true,color:nd._origColor+'40',size:15}
 });
 }
 });
-setTimeout(()=>showResults(),1500);
+// Re-fit to show only the path
+NET.fit({animation:{duration:600,easingFunction:'easeInOutQuad'}});
+},500);
+setTimeout(()=>showResults(),2500);
 return;
 }
 
 const hop=hopSequence[hopIdx];
-const stepLabel=hop.step.action;
-statusEl.textContent=`Step ${hop.step.step_number}: ${stepLabel.substring(0,50)}...`;
+statusEl.textContent=`Step ${hop.step.step_number}: ${hop.step.action.substring(0,50)}...`;
 
-// Dim previous active nodes back to "visited" state
-prevActiveNodes.forEach(nid=>{
+// Dim previous active to visited
+prevActive.forEach(nid=>{
 const nd=nodes.get(nid);
 if(nd){
 nodes.update({id:nid,
-size:nd._baseSize*1.5,
-color:{background:nd._origColor,border:'rgba(255,255,255,.15)'},
-font:{color:'rgba(200,200,200,.6)',size:9},
+size:nd._baseSize*1.8,
+color:{background:nd._origColor,border:nd._origColor+'80'},
+font:{color:'rgba(220,220,220,.7)',size:10},
 borderWidth:1,
-shadow:{enabled:true,color:nd._origColor+'20',size:8}
+shadow:{enabled:true,color:nd._origColor+'25',size:10}
 });
 }
 });
+prevActive=[];
 
-prevActiveNodes=[];
-
-// Illuminate this hop's nodes one by one
+// Light up this step's nodes
 let ni=0;
 function lightNode(){
 if(ni>=hop.nodes.length){
 hopIdx++;
-setTimeout(hopNext,hopDelay*0.4);
+setTimeout(hopNext,hopDelay*0.35);
 return;
 }
 const nid=hop.nodes[ni];
 const nd=nodes.get(nid);
 if(nd){
-// Active node: large, bright, glowing
+// Active: big, bright, labeled
 nodes.update({id:nid,
-size:nd._baseSize*2.8,
+size:nd._baseSize*3.2,
 color:{background:nd._origColor,border:'#fff'},
-font:{color:'#fff',size:13,bold:true},
+font:{color:'#fff',size:14,bold:{toString:()=>'true'}},
 borderWidth:3,
-shadow:{enabled:true,color:nd._origColor+'70',size:30}
+shadow:{enabled:true,color:nd._origColor+'80',size:35}
 });
-prevActiveNodes.push(nid);
+prevActive.push(nid);
 
-// Light up edges to any already-visited node
+// Bright glowing edges to visited neighbors
 edges.forEach(e=>{
-if((e._origFrom===nid||e._origTo===nid)){
+if(e._origFrom===nid||e._origTo===nid){
 const other=e._origFrom===nid?e._origTo:e._origFrom;
 if(visited.has(other)){
 edges.update({id:e.id,
-color:{color:nd._origColor+'90'},
-width:2.5,
-dashes:[8,4] // animated dash effect
+color:{color:nd._origColor},
+width:4,
+dashes:[10,5],
+shadow:{enabled:true,color:nd._origColor+'60',size:8}
 });
+visitedEdges.add(e.id);
 }
 }
 });
 visited.add(nid);
 
-// Focus camera on this node
-try{NET.focus(nid,{scale:1.2,animation:{duration:300,easingFunction:'easeInOutQuad'}})}catch(e){}
+// Breadcrumb
+addBreadcrumb(nid,nd._origColor,true);
+
+// Camera
+try{NET.focus(nid,{scale:1.1,animation:{duration:350,easingFunction:'easeInOutQuad'}})}catch(ex){}
 }
 ni++;
-setTimeout(lightNode,250);
+setTimeout(lightNode,300);
 }
 lightNode();
 }
