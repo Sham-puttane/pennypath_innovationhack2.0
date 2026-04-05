@@ -339,6 +339,21 @@ if(el.classList.contains('selected')){if(!A.q3.includes(v))A.q3.push(v)}else{A.q
 // Legacy sel (kept for compatibility)
 function sel(el,q,v){pickAndNext(el,q,v)}
 
+// State Farm URL mapping based on insurance type in step action
+function sfLink(action){
+const a=action.toLowerCase();
+if(a.includes('renters'))return'https://www.statefarm.com/insurance/renters';
+if(a.includes('auto')||a.includes('car'))return'https://www.statefarm.com/insurance/auto';
+if(a.includes('life'))return'https://www.statefarm.com/insurance/life';
+if(a.includes('health'))return'https://www.statefarm.com/insurance/health';
+return'https://www.statefarm.com/insurance';
+}
+function sfBadge(s){
+if(!s.is_state_farm)return'';
+const url=sfLink(s.action);
+return`<a href="${url}" target="_blank" rel="noopener" onclick="event.stopPropagation()" class="inline-flex items-center gap-1 text-[8px] font-bold bg-accent hover:bg-accent-light px-2 py-0.5 rounded-full shrink-0 transition cursor-pointer" title="View on State Farm">State Farm &nearr;</a>`;
+}
+
 // ─── Submit ─────────────────────────────────────────────────────
 async function submit(){
 A.q6=document.getElementById('q6').value||null;
@@ -609,7 +624,7 @@ div.innerHTML=`<div class="flex items-start gap-3">
 <div class="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold" style="background:${c}20;color:${c}">${s.step_number}</div>
 <div class="flex-1 min-w-0">
 <div class="flex items-center gap-2"><p class="text-sm font-semibold truncate">${s.personalized_action||s.action}</p>
-${s.is_state_farm?'<span class="text-[8px] font-bold bg-accent px-1.5 py-0.5 rounded-full shrink-0">State Farm</span>':''}</div>
+${sfBadge(s)}</div>
 <p class="text-xs text-[#666] mt-1 line-clamp-2">${s.personalized_reason||s.reason}</p>
 <p class="text-[10px] text-[#444] mt-1 uppercase tracking-wider">${s.tier.replace(/_/g,' ')}</p>
 </div></div>`;
@@ -734,7 +749,7 @@ div.innerHTML=`<div class="flex items-start gap-3">
 <div class="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold" style="background:${c}20;color:${c}">${s.step_number}</div>
 <div class="flex-1 min-w-0">
 <div class="flex items-center gap-1"><p class="text-sm font-semibold truncate">${s.action}</p>${diffBadge}
-${s.is_state_farm?'<span class="text-[8px] font-bold bg-accent px-1.5 py-0.5 rounded-full shrink-0">State Farm</span>':''}</div>
+${sfBadge(s)}</div>
 <p class="text-xs text-[#666] mt-1 line-clamp-2">${s.reason}</p></div></div>`;
 sb.appendChild(div);
 });
@@ -755,7 +770,7 @@ div.style.animationDelay=(i*50)+'ms';div.dataset.idx=i;div.dataset.nodes=JSON.st
 div.onclick=()=>hlStep(i);const c=tc[s.tier]||'#666';
 div.innerHTML=`<div class="flex items-start gap-3"><div class="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold" style="background:${c}20;color:${c}">${s.step_number}</div>
 <div class="flex-1 min-w-0"><p class="text-sm font-semibold truncate">${s.personalized_action||s.action}</p>
-${s.is_state_farm?'<span class="text-[8px] font-bold bg-accent px-1.5 py-0.5 rounded-full shrink-0">State Farm</span>':''}
+${sfBadge(s)}
 <p class="text-xs text-[#666] mt-1 line-clamp-2">${s.personalized_reason||s.reason}</p></div></div>`;
 sb.appendChild(div);
 });
