@@ -115,6 +115,115 @@ def personas():
     })
 
 
+def build_reasoning_path(traversal, steps):
+    """Build a structured hop-by-hop reasoning path from graph traversal + FOO steps.
+    Each query produces a unique path based on real graph edges."""
+    entry_nodes = []
+    reasoning_path = []
+    hop = 0
+
+    # Category mapping from node type
+    cat_map = {
+        "FINANCIAL_CONCEPT": "entry", "FINANCIAL_PRODUCT": "entry",
+        "ACTION": "action", "RISK": "risk",
+        "ORGANIZATION": "resource", "EVENT": "resource",
+        "PERSON": "entry", "GEO": "entry",
+    }
+
+    # Build entry nodes from the first traversal layer
+    for n in traversal.get("entry_nodes", []):
+        ntype = n.get("type", "").upper().strip('"')
+        entry_nodes.append({
+            "id": n["name"], "label": n["name"],
+            "category": cat_map.get(ntype, "entry"), "hop": 0,
+        })
+
+    # Build reasoning path from FOO steps
+    prev_nodes = [n["name"] for n in traversal.get("entry_nodes", [])[:3]]
+    seen = set(prev_nodes)
+
+    for s in steps:
+        step_nodes = s.get("source_nodes", [])
+        risk_nodes = s.get("risk_nodes", [])
+
+        # Find new nodes in this step (not yet seen)
+        new_nodes = [n for n in step_nodes + risk_nodes if n not in seen]
+        if not new_nodes and step_nodes:
+            new_nodes = step_nodes[:1]  # At least show one node per step
+
+        for target in new_nodes:
+            # Find a source node from prev_nodes that connects via an edge
+            source = prev_nodes[0] if prev_nodes else None
+
+            # Look for actual graph edge between any prev node and target
+            for e in traversal.get("edges", []):
+                if (e["source"] in seen and e["target"] == target) or \
+                   (e["target"] in seen and e["source"] == target):
+                    source = e["source"] if e["target"] == target else e["target"]
+                    break
+
+            # Determine category
+            cat = "action"
+            if target in risk_nodes:
+                cat = "risk"
+            else:
+                # Check from traversal node data
+                for n in traversal.get("all_nodes", []):
+                    if n["name"] == target:
+                        ntype = n.get("type", "").upper().strip('"')
+                        cat = cat_map.get(ntype, "action")
+                        break
+
+            # Determine edge label from step tier
+            tier = s.get("tier", "")
+            edge_labels = {
+                "access": "enables",
+                "stop_bleeding": "reduces_risk",
+                "safety_net": "protects_against",
+                "protection": "insures_against",
+                "build": "builds_toward",
+                "grow": "grows_into",
+            }
+            edge_label = edge_labels.get(tier, "leads_to")
+
+            hop += 1
+            reasoning_path.append({
+                "hop": hop,
+                "from": source,
+                "to": target,
+                "edge_label": edge_label,
+                "node_id": target,
+                "node_label": target,
+                "node_category": cat,
+                "step_number": s.get("step_number"),
+                "step_action": s.get("action", ""),
+            })
+            seen.add(target)
+
+        if new_nodes:
+            prev_nodes = new_nodes
+
+    # Build focused subgraph (only traversed nodes + edges)
+    path_node_ids = set(n["id"] for n in entry_nodes)
+    path_node_ids.update(r["node_id"] for r in reasoning_path)
+    path_node_ids.update(r["from"] for r in reasoning_path if r["from"])
+
+    focused_nodes = [n for n in traversal.get("all_nodes", []) if n["name"] in path_node_ids]
+    focused_edges = [e for e in traversal.get("edges", [])
+                     if e["source"] in path_node_ids and e["target"] in path_node_ids]
+
+    return {
+        "entry_nodes": entry_nodes,
+        "reasoning_path": reasoning_path,
+        "focused_subgraph": {
+            "nodes": [{"id": n["name"], "label": n["name"][:25], "category": cat_map.get(n.get("type","").upper().strip('"'), "entry"),
+                       "color": n.get("color","gray")} for n in focused_nodes],
+            "links": [{"from": e["source"], "to": e["target"], "label": e.get("description","")[:40]}
+                      for e in focused_edges],
+        },
+    }
+
+
 @app.route("/api/query", methods=["POST"])
 def query():
     """Full pipeline: intake -> graph traversal -> FOO -> personalization."""
@@ -154,6 +263,9 @@ def query():
     community_info = [gq.get_community_info(cid) for cid in traversal["communities_touched"]
                       if gq.get_community_info(cid)]
 
+    # Step 5: Build structured reasoning path
+    rpath = build_reasoning_path(traversal, steps)
+
     return jsonify({
         "session_id": session_id,
         "profile": traversal["profile"],
@@ -161,6 +273,7 @@ def query():
         "protection_gaps": traversal["protection_gaps"],
         "steps": steps,
         "graph": viz,
+        "reasoning": rpath,
         "communities": community_info,
         "whatif_scenarios": {k: v["label"] for k, v in WHATIF_SCENARIOS.items()},
         "stats": {

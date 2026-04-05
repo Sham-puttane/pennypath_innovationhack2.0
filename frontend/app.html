@@ -208,59 +208,57 @@ body:JSON.stringify({q1:A.q1,q2:A.q2,q3:A.q3,q4:A.q4,q5:A.q5,q6:A.q6,skip_person
 DATA=await r.json();
 }catch(e){DATA=demoDB()}
 
-// Render graph immediately (all dimmed)
-renderTraversalGraph(DATA.graph,DATA.steps);
+// Render graph with real reasoning path
+renderTraversalGraph(DATA.graph,DATA.steps,DATA.reasoning);
 }
 
 // ─── Traversal Graph (Phase 2) ──────────────────────────────────
-function renderTraversalGraph(g,steps){
+function renderTraversalGraph(g,steps,reasoning){
 const c=document.getElementById('graphContainer');
-// Base sizes for reference
 const BASE=8;
+const CAT_COLOR={entry:'#9333ea',risk:'#ef4444',action:'#22c55e',resource:'#eab308'};
+
 const nodesData=g.nodes.map(n=>({
 id:n.id,label:n.label||n.id.substring(0,20),
-color:{background:'rgba(80,80,80,.35)',border:'rgba(60,60,60,.2)'},
-font:{color:'rgba(150,150,150,.25)',size:8},
-size:BASE+2,borderWidth:0,
-shadow:false,
-_origColor:CM[n.color]||'#555',_baseSize:n.size||BASE
+color:{background:'rgba(80,80,80,.3)',border:'rgba(60,60,60,.15)'},
+font:{color:'rgba(140,140,140,.2)',size:7},
+size:BASE+1,borderWidth:0,shadow:false,
+_origColor:CM[n.color]||'#555',_baseSize:n.size||BASE,_cat:n.color||'gray'
 }));
 const edgesData=g.edges.map((e,i)=>({
-id:i,from:e.from,to:e.to,
-color:{color:'rgba(80,80,80,.12)'},
-width:0.8,smooth:{type:'continuous'},
-_origFrom:e.from,_origTo:e.to
+id:'e'+i,from:e.from,to:e.to,
+color:{color:'rgba(60,60,60,.08)'},
+width:0.5,smooth:{type:'continuous'},
+_origFrom:e.from,_origTo:e.to,label:''
 }));
 const nodes=new vis.DataSet(nodesData);
 const edges=new vis.DataSet(edgesData);
 
 NET=new vis.Network(c,{nodes,edges},{
-physics:{solver:'forceAtlas2Based',forceAtlas2Based:{gravitationalConstant:-60,springLength:130,springConstant:.025},
-stabilization:{iterations:100,fit:true}},
+physics:{solver:'forceAtlas2Based',forceAtlas2Based:{gravitationalConstant:-55,springLength:120,springConstant:.025},
+stabilization:{iterations:80,fit:true}},
 interaction:{dragNodes:false,zoomView:true,dragView:true,hover:false},
 nodes:{shape:'dot'},edges:{arrows:{to:{enabled:false}}}
 });
 
-// Start animation after stabilization OR 3s timeout (whichever first)
-let animStarted=false;
-function startAnim(){
-if(animStarted)return;
-animStarted=true;
+let started=false;
+function go(){
+if(started)return;started=true;
 NET.setOptions({physics:false});
-runTraversalAnimation(nodes,edges,steps);
+runTraversalAnimation(nodes,edges,steps,reasoning,CAT_COLOR);
 }
-NET.once('stabilized',startAnim);
-setTimeout(startAnim,1500);
+NET.once('stabilized',go);
+setTimeout(go,1500);
 }
 
-function runTraversalAnimation(nodes,edges,steps){
+function runTraversalAnimation(nodes,edges,steps,reasoning,CAT_COLOR){
 const statusEl=document.getElementById('traversalStatus');
 const bcEl=document.getElementById('breadcrumb');
 const visited=new Set();
-const visitedEdges=new Set();
+const litEdges=new Set();
 
-// Pre-build edge index for O(1) lookup instead of iterating all edges
-const edgeIdx={};// nodeId -> [{edgeId, other}]
+// Pre-build edge index
+const edgeIdx={};
 edges.forEach(e=>{
 if(!edgeIdx[e._origFrom])edgeIdx[e._origFrom]=[];
 if(!edgeIdx[e._origTo])edgeIdx[e._origTo]=[];
@@ -268,104 +266,122 @@ edgeIdx[e._origFrom].push({id:e.id,other:e._origTo});
 edgeIdx[e._origTo].push({id:e.id,other:e._origFrom});
 });
 
-// Collect entry nodes (first 2 steps)
-const entryNodes=[];
-const allTraversalNodes=[];
+// Use reasoning payload if available, else fall back to steps
+const entryList=(reasoning&&reasoning.entry_nodes)||[];
+const rpath=(reasoning&&reasoning.reasoning_path)||[];
+const hasReasoning=rpath.length>0;
+
+// If no reasoning path, build one from steps (fallback)
+if(!hasReasoning){
 steps.forEach((s,i)=>{
 (s.source_nodes||[]).forEach(n=>{
-if(!allTraversalNodes.includes(n)&&nodes.get(n))allTraversalNodes.push(n);
-if(i<2&&!entryNodes.includes(n)&&nodes.get(n))entryNodes.push(n);
+if(i<2&&!entryList.find(e=>e.id===n)&&nodes.get(n))
+entryList.push({id:n,label:n,category:'entry',hop:0});
+if(!rpath.find(r=>r.node_id===n)&&nodes.get(n))
+rpath.push({hop:rpath.length+1,from:null,to:n,node_id:n,node_label:n,
+node_category:'action',edge_label:'leads_to',step_number:s.step_number,step_action:s.action});
 });
 });
-
-// Build hop sequence — deduplicate nodes across steps
-const seenInHops=new Set();
-const hopSequence=[];
-steps.forEach(s=>{
-const fresh=(s.source_nodes||[]).filter(n=>nodes.get(n)&&!seenInHops.has(n));
-if(fresh.length){
-hopSequence.push({step:s,nodes:fresh});
-fresh.forEach(n=>seenInHops.add(n));
 }
-});
 
-// Timing: slower for fewer hops, faster for many — always readable
-const totalNodes=hopSequence.reduce((a,h)=>a+h.nodes.length,0)+entryNodes.length;
-const perNodeDelay=Math.max(500,Math.min(900,8000/Math.max(totalNodes,1)));
+// Timing
+const totalItems=entryList.length+rpath.length;
+const delay=Math.max(600,Math.min(1000,9000/Math.max(totalItems,1)));
 
-// Helper: breadcrumb chip
-function addCrumb(nid,color,arrow){
-if(arrow){const a=document.createElement('span');a.textContent='\u2192';a.className='text-[#444] shrink-0';bcEl.appendChild(a)}
+// Color for category
+function catColor(cat){return CAT_COLOR[cat]||CM[cat]||'#9333ea'}
+
+// Breadcrumb chip with hop number
+function addCrumb(label,color,hopNum,edgeLabel){
+if(bcEl.children.length>0){
+const arr=document.createElement('span');
+arr.className='text-[10px] text-[#555] shrink-0 flex items-center gap-0.5';
+arr.innerHTML=edgeLabel?`<span class="text-[8px] text-[#444] italic">${edgeLabel}</span> \u2192`:'\u2192';
+bcEl.appendChild(arr);
+}
 const c=document.createElement('span');
-c.textContent=nid.length>20?nid.substring(0,18)+'..':nid;
-c.className='px-2 py-0.5 rounded text-[10px] font-semibold shrink-0';
+const short=label.length>18?label.substring(0,16)+'..':label;
+c.innerHTML=hopNum!==null?`<span class="opacity-50 mr-0.5">${hopNum}.</span>${short}`:short;
+c.className='px-2 py-0.5 rounded text-[10px] font-semibold shrink-0 whitespace-nowrap';
 c.style.cssText=`background:${color}20;color:${color};border:1px solid ${color}35;animation:fadeIn .3s ease both`;
 bcEl.appendChild(c);
 bcEl.scrollLeft=bcEl.scrollWidth;
 }
 
-// Helper: light up a node (no shadow — too expensive)
-function lightNode(nid,scale,bordered){
-const nd=nodes.get(nid);
-if(!nd)return;
+// Light node with category color
+function lightUp(nid,cat,scale,active){
+const nd=nodes.get(nid);if(!nd)return;
+const col=catColor(cat);
 nodes.update({id:nid,
-size:nd._baseSize*scale,
-color:{background:nd._origColor,border:bordered?'#fff':nd._origColor+'80'},
-font:{color:bordered?'#fff':'rgba(220,220,220,.7)',size:bordered?13:10},
-borderWidth:bordered?3:1
+size:nd._baseSize*(active?3.2:1.8),
+color:{background:col,border:active?'#fff':col+'80'},
+font:{color:active?'#fff':'rgba(220,220,220,.6)',size:active?13:9},
+borderWidth:active?3:1
 });
 }
 
-// Helper: light edges from nid to visited neighbors
-function lightEdges(nid){
-const nd=nodes.get(nid);
-const color=nd?nd._origColor:'#9333ea';
-(edgeIdx[nid]||[]).forEach(({id,other})=>{
-if(visited.has(other)){
-edges.update({id,color:{color},width:3.5,dashes:[8,4]});
-visitedEdges.add(id);
+// Light edge between two nodes + add hop number label
+function lightEdge(fromId,toId,hopNum,edgeLabel){
+(edgeIdx[fromId]||[]).forEach(({id,other})=>{
+if(other===toId){
+const col=catColor('action');
+edges.update({id,color:{color:col},width:4,dashes:[8,4],
+label:String(hopNum),font:{color:col,size:10,strokeWidth:0}});
+litEdges.add(id);
+}
+});
+(edgeIdx[toId]||[]).forEach(({id,other})=>{
+if(other===fromId&&!litEdges.has(id)){
+const col=catColor('action');
+edges.update({id,color:{color:col},width:4,dashes:[8,4],
+label:String(hopNum),font:{color:col,size:10,strokeWidth:0}});
+litEdges.add(id);
 }
 });
 }
 
-// ─── PHASE A: Entry nodes (highlight user's input) ───────────
+// ─── PHASE A: Entry nodes ────────────────────────────────────
 statusEl.textContent='Identifying your profile...';
 bcEl.innerHTML='';
 let ei=0;
 function nextEntry(){
-if(ei>=entryNodes.length){setTimeout(doHops,800);return}
-const nid=entryNodes[ei];
-lightNode(nid,3,true);
+if(ei>=entryList.length){setTimeout(doPath,700);return}
+const en=entryList[ei];
+const nid=en.id;
+if(nodes.get(nid)){
+lightUp(nid,en.category||'entry',3.2,true);
 visited.add(nid);
-addCrumb(nid,nodes.get(nid)?._origColor||'#9333ea',ei>0);
+addCrumb(en.label||nid,catColor(en.category||'entry'),null,null);
 try{NET.focus(nid,{scale:1,animation:{duration:300}})}catch(x){}
+}
 ei++;
-setTimeout(nextEntry,perNodeDelay);
+setTimeout(nextEntry,delay*0.7);
 }
 setTimeout(nextEntry,400);
 
-// ─── PHASE B: Hop through steps ──────────────────────────────
-let hi=0;
-let prevAct=[];
+// ─── PHASE B: Reasoning path hop-by-hop ──────────────────────
+let ri=0;
+let prevNodes=[];
 
-function doHops(){nextHop()}
+function doPath(){nextRHop()}
 
-function nextHop(){
-if(hi>=hopSequence.length){
-// ─── PHASE C: Clean up → focused path ────────────────────
+function nextRHop(){
+if(ri>=rpath.length){
 statusEl.textContent='Path discovered. Building your queue...';
+// Phase C: focused view
 setTimeout(()=>{
-// Batch: hide non-traversed
 const hideN=[];const hideE=[];
 nodes.forEach(n=>{if(!visited.has(n.id))hideN.push({id:n.id,hidden:true})});
-edges.forEach(e=>{if(!visitedEdges.has(e.id))hideE.push({id:e.id,hidden:true})});
+edges.forEach(e=>{if(!litEdges.has(e.id))hideE.push({id:e.id,hidden:true})});
 if(hideN.length)nodes.update(hideN);
 if(hideE.length)edges.update(hideE);
-// Settle traversed nodes
+// Settle
 const settle=[];
 visited.forEach(nid=>{
 const nd=nodes.get(nid);
-if(nd)settle.push({id:nid,size:nd._baseSize*2,color:{background:nd._origColor,border:nd._origColor},font:{color:'#eee',size:10},borderWidth:1});
+if(nd)settle.push({id:nid,size:nd._baseSize*2,
+color:{background:nd._origColor,border:nd._origColor},
+font:{color:'#eee',size:10},borderWidth:1});
 });
 if(settle.length)nodes.update(settle);
 try{NET.fit({animation:{duration:500}})}catch(x){}
@@ -374,41 +390,45 @@ setTimeout(showResults,2200);
 return;
 }
 
-const hop=hopSequence[hi];
-statusEl.textContent=`Step ${hop.step.step_number}: ${hop.step.action.substring(0,55)}...`;
+const hop=rpath[ri];
+const stepText=hop.step_action||hop.node_label||'';
+statusEl.textContent=`Hop ${hop.hop}: ${stepText.substring(0,50)}...`;
 
-// Dim previous active → visited state (batch)
-if(prevAct.length){
-const dims=prevAct.map(nid=>({id:nid,...dimProps(nid)})).filter(x=>x);
+// Dim previous active
+if(prevNodes.length){
+const dims=[];
+prevNodes.forEach(({nid,cat})=>{
+const nd=nodes.get(nid);
+if(nd)dims.push({id:nid,size:nd._baseSize*1.8,
+color:{background:catColor(cat),border:catColor(cat)+'70'},
+font:{color:'rgba(220,220,220,.6)',size:9},borderWidth:1});
+});
 if(dims.length)nodes.update(dims);
 }
-prevAct=[];
+prevNodes=[];
 
-// Illuminate this step's nodes one by one
-let ni=0;
-function doNode(){
-if(ni>=hop.nodes.length){
-hi++;
-setTimeout(nextHop,perNodeDelay*0.5);
-return;
-}
-const nid=hop.nodes[ni];
-lightNode(nid,3,true);
-lightEdges(nid);
-visited.add(nid);
-prevAct.push(nid);
-addCrumb(nid,nodes.get(nid)?._origColor||'#9333ea',true);
-try{NET.focus(nid,{scale:1.05,animation:{duration:250}})}catch(x){}
-ni++;
-setTimeout(doNode,perNodeDelay);
-}
-doNode();
+// Light target node
+const tgt=hop.node_id||hop.to;
+const cat=hop.node_category||'action';
+if(tgt&&nodes.get(tgt)){
+lightUp(tgt,cat,3.2,true);
+visited.add(tgt);
+prevNodes.push({nid:tgt,cat});
+
+// Light edge from source
+if(hop.from&&nodes.get(hop.from)){
+lightEdge(hop.from,tgt,hop.hop,hop.edge_label);
+visited.add(hop.from);
 }
 
-function dimProps(nid){
-const nd=nodes.get(nid);
-if(!nd)return null;
-return{size:nd._baseSize*1.6,color:{background:nd._origColor,border:nd._origColor+'70'},font:{color:'rgba(200,200,200,.6)',size:9},borderWidth:1};
+// Breadcrumb with hop number and edge label
+addCrumb(hop.node_label||tgt,catColor(cat),hop.hop,hop.edge_label);
+
+try{NET.focus(tgt,{scale:1.05,animation:{duration:250}})}catch(x){}
+}
+
+ri++;
+setTimeout(nextRHop,delay);
 }
 }
 
@@ -575,6 +595,26 @@ graph:{nodes:[
 {from:'BANK ACCOUNT',to:'BANK',value:2},{from:'BANK ACCOUNT',to:'CREDIT UNION',value:2},
 {from:'INCOME',to:'CASH',value:2},{from:'CREDIT CARD',to:'FEES',value:2},
 {from:'INCOME',to:'DEBT',value:2},{from:'EMERGENCY FUND',to:'DEBT',value:2}
+]},
+reasoning:{
+entry_nodes:[
+{id:'PREPAID CARD',label:'Prepaid Card',category:'entry',hop:0},
+{id:'INCOME',label:'Income',category:'entry',hop:0},
+{id:'CREDIT CARD DEBT',label:'CC Debt',category:'risk',hop:0}
+],
+reasoning_path:[
+{hop:1,from:'PREPAID CARD',to:'BANK ACCOUNT',node_id:'BANK ACCOUNT',node_label:'Bank Account',node_category:'action',edge_label:'enables',step_number:1,step_action:'Open a bank account'},
+{hop:2,from:'INCOME',to:'IRREGULAR INCOME',node_id:'IRREGULAR INCOME',node_label:'Irregular Income',node_category:'entry',edge_label:'classified_as',step_number:2,step_action:'Track your income'},
+{hop:3,from:'BANK ACCOUNT',to:'SAVING',node_id:'SAVING',node_label:'Saving',node_category:'action',edge_label:'enables',step_number:3,step_action:'Build emergency fund'},
+{hop:4,from:'SAVING',to:'EMERGENCY FUND',node_id:'EMERGENCY FUND',node_label:'Emergency Fund',node_category:'action',edge_label:'protects_against',step_number:3,step_action:'Build emergency fund'},
+{hop:5,from:'CREDIT CARD DEBT',to:'DEBT',node_id:'DEBT',node_label:'Debt',node_category:'risk',edge_label:'reduces_risk',step_number:4,step_action:'Pay down CC debt'},
+{hop:6,from:'DEBT',to:'DEBT COLLECTOR',node_id:'DEBT COLLECTOR',node_label:'Debt Collector',node_category:'risk',edge_label:'leads_to',step_number:5,step_action:'Know your rights'},
+{hop:7,from:'INCOME',to:'BILLS',node_id:'BILLS',node_label:'Bills',node_category:'resource',edge_label:'protects_against',step_number:6,step_action:'Track bills'},
+{hop:8,from:'BILLS',to:'AUTO INSURANCE',node_id:'AUTO INSURANCE',node_label:'Auto Insurance',node_category:'action',edge_label:'insures_against',step_number:7,step_action:'Get auto insurance'},
+{hop:9,from:'AUTO INSURANCE',to:'STATE FARM',node_id:'STATE FARM',node_label:'State Farm',node_category:'resource',edge_label:'provided_by',step_number:7,step_action:'Get auto insurance'},
+{hop:10,from:'STATE FARM',to:'HEALTH INSURANCE',node_id:'HEALTH INSURANCE',node_label:'Health Insurance',node_category:'action',edge_label:'insures_against',step_number:8,step_action:'Get health insurance'},
+{hop:11,from:'STATE FARM',to:'RENTERS INSURANCE',node_id:'RENTERS INSURANCE',node_label:'Renters Insurance',node_category:'action',edge_label:'insures_against',step_number:9,step_action:'Get renters insurance'},
+{hop:12,from:'DEBT',to:'CREDIT REPORT',node_id:'CREDIT REPORT',node_label:'Credit Report',node_category:'action',edge_label:'builds_toward',step_number:10,step_action:'Check credit report'}
 ]},
 whatif_scenarios:{lose_job:'What if I lose my job?',pay_off_debt:'What if I pay off debt?',get_renters_insurance:'What if I get renters insurance?',open_bank_account:'What if I open a bank account?',get_steady_job:'What if I get a steady job?'},
 stats:{total_steps:10}};
