@@ -84,21 +84,23 @@ body{font-family:'Inter',sans-serif;background:#0a0a0a;color:#fff;overflow-x:hid
 <!-- Question container (one at a time) -->
 <div class="relative z-10" id="questionArea" style="min-height:320px">
 
-<!-- Step 0: Persona -->
+<!-- Step 0: Persona (multi-select) -->
 <div class="step-page" data-step="0">
 <div class="q-card-wrap">
-<label class="block text-base font-semibold mb-5 text-center">Which of these best describes you?</label>
+<label class="block text-base font-semibold mb-2 text-center">Which of these best describes you?</label>
+<p class="text-[#666] text-xs text-center mb-5">Select all that apply, then tap Next</p>
 <div class="flex flex-wrap justify-center gap-2" id="personaGroup">
-<label class="opt" onclick="pickAndNext(this,'persona','gig_worker')" style="flex:0 0 auto;padding:10px 16px"><span class="dot"></span>&#x1F477; Gig Worker</label>
-<label class="opt" onclick="pickAndNext(this,'persona','recent_immigrant')" style="flex:0 0 auto;padding:10px 16px"><span class="dot"></span>&#x1F30D; Recent Immigrant</label>
-<label class="opt" onclick="pickAndNext(this,'persona','international_student')" style="flex:0 0 auto;padding:10px 16px"><span class="dot"></span>&#x1F393; International Student</label>
-<label class="opt" onclick="pickAndNext(this,'persona','single_parent')" style="flex:0 0 auto;padding:10px 16px"><span class="dot"></span>&#x1F464; Single Parent</label>
-<label class="opt" onclick="pickAndNext(this,'persona','first_gen_college_student')" style="flex:0 0 auto;padding:10px 16px"><span class="dot"></span>&#x1F4DA; First-Gen Student</label>
-<label class="opt" onclick="pickAndNext(this,'persona','unbanked')" style="flex:0 0 auto;padding:10px 16px"><span class="dot"></span>&#x1F3E6; Unbanked</label>
-<label class="opt" onclick="pickAndNext(this,'persona','veteran')" style="flex:0 0 auto;padding:10px 16px"><span class="dot"></span>&#x1F396;&#xFE0F; Veteran</label>
-<label class="opt" onclick="pickAndNext(this,'persona','reentry')" style="flex:0 0 auto;padding:10px 16px"><span class="dot"></span>&#x1F504; Reentry</label>
-<label class="opt" onclick="pickAndNext(this,'persona','general')" style="flex:0 0 auto;padding:10px 16px"><span class="dot"></span>&#x2B50; General Path</label>
+<label class="opt" onclick="chkPersona(this,'gig_worker')" style="flex:0 0 auto;padding:10px 16px"><span class="chk"></span>&#x1F477; Gig Worker</label>
+<label class="opt" onclick="chkPersona(this,'recent_immigrant')" style="flex:0 0 auto;padding:10px 16px"><span class="chk"></span>&#x1F30D; Recent Immigrant</label>
+<label class="opt" onclick="chkPersona(this,'international_student')" style="flex:0 0 auto;padding:10px 16px"><span class="chk"></span>&#x1F393; International Student</label>
+<label class="opt" onclick="chkPersona(this,'single_parent')" style="flex:0 0 auto;padding:10px 16px"><span class="chk"></span>&#x1F464; Single Parent</label>
+<label class="opt" onclick="chkPersona(this,'first_gen_college_student')" style="flex:0 0 auto;padding:10px 16px"><span class="chk"></span>&#x1F4DA; First-Gen Student</label>
+<label class="opt" onclick="chkPersona(this,'unbanked')" style="flex:0 0 auto;padding:10px 16px"><span class="chk"></span>&#x1F3E6; Unbanked</label>
+<label class="opt" onclick="chkPersona(this,'veteran')" style="flex:0 0 auto;padding:10px 16px"><span class="chk"></span>&#x1F396;&#xFE0F; Veteran</label>
+<label class="opt" onclick="chkPersona(this,'reentry')" style="flex:0 0 auto;padding:10px 16px"><span class="chk"></span>&#x1F504; Reentry</label>
+<label class="opt" onclick="chkPersona(this,'general')" style="flex:0 0 auto;padding:10px 16px"><span class="chk"></span>&#x2B50; General Path</label>
 </div>
+<button onclick="goStep(1)" class="w-full mt-5 py-3 rounded-xl text-sm font-semibold bg-accent text-white hover:bg-accent-light transition" style="box-shadow:0 0 20px rgba(147,51,234,.2)">Next &rarr;</button>
 </div></div>
 
 <!-- Step 1: Q1 -->
@@ -123,16 +125,19 @@ body{font-family:'Inter',sans-serif;background:#0a0a0a;color:#fff;overflow-x:hid
 </div>
 </div></div>
 
-<!-- Step 3: Q3 -->
+<!-- Step 3: Q3 (multi-select) -->
 <div class="step-page hidden" data-step="3"><div class="q-card-wrap">
-<label class="block text-base font-semibold mb-5 text-center">Do you have debt? What kind?</label>
+<label class="block text-base font-semibold mb-2 text-center">Do you have debt? What kind?</label>
+<p class="text-[#666] text-xs text-center mb-5">Select all that apply, then tap Next</p>
 <div class="space-y-3" id="q3g">
-<label class="opt" onclick="pickAndNext(this,'q3','none')"><span class="dot"></span>None</label>
-<label class="opt" onclick="pickAndNext(this,'q3','credit_card')"><span class="dot"></span>Credit card</label>
-<label class="opt" onclick="pickAndNext(this,'q3','student')"><span class="dot"></span>Student loans</label>
-<label class="opt" onclick="pickAndNext(this,'q3','medical')"><span class="dot"></span>Medical</label>
-<label class="opt" onclick="pickAndNext(this,'q3','multiple')"><span class="dot"></span>Multiple types</label>
+<label class="opt" onclick="chkDebt(this,'none')"><span class="chk"></span>None</label>
+<label class="opt" onclick="chkDebt(this,'credit_card')"><span class="chk"></span>Credit card</label>
+<label class="opt" onclick="chkDebt(this,'student')"><span class="chk"></span>Student loans</label>
+<label class="opt" onclick="chkDebt(this,'medical')"><span class="chk"></span>Medical</label>
+<label class="opt" onclick="chkDebt(this,'auto_loan')"><span class="chk"></span>Auto loan</label>
+<label class="opt" onclick="chkDebt(this,'personal_loan')"><span class="chk"></span>Personal loan</label>
 </div>
+<button onclick="goStep(4)" class="w-full mt-5 py-3 rounded-xl text-sm font-semibold bg-accent text-white hover:bg-accent-light transition" style="box-shadow:0 0 20px rgba(147,51,234,.2)">Next &rarr;</button>
 </div></div>
 
 <!-- Step 4: Q4 -->
@@ -256,7 +261,7 @@ body{font-family:'Inter',sans-serif;background:#0a0a0a;color:#fff;overflow-x:hid
 
 <script>
 const API='http://localhost:5000';
-const A={persona:null,q1:null,q2:null,q3:null,q4:null,q5:[],q6:''};
+const A={persona:[],q1:null,q2:null,q3:[],q4:null,q5:[],q6:''};
 let DATA=null,NET=null,NET2=null;
 let curStep=0;
 const TOTAL_STEPS=7;
@@ -303,6 +308,21 @@ else{document.querySelector('#q5g .opt:last-child').classList.remove('selected')
 if(el.classList.contains('selected')){if(!A.q5.includes(v))A.q5.push(v)}else{A.q5=A.q5.filter(x=>x!==v)}}
 }
 
+// Persona multi-select
+function chkPersona(el,v){
+el.classList.toggle('selected');
+if(el.classList.contains('selected')){if(!A.persona.includes(v))A.persona.push(v)}
+else{A.persona=A.persona.filter(x=>x!==v)}
+}
+
+// Debt multi-select
+function chkDebt(el,v){
+el.classList.toggle('selected');
+if(v==='none'){A.q3=['none'];document.querySelectorAll('#q3g .opt').forEach(o=>o.classList.remove('selected'));el.classList.add('selected')}
+else{document.querySelector('#q3g .opt:first-child').classList.remove('selected');A.q3=A.q3.filter(x=>x!=='none');
+if(el.classList.contains('selected')){if(!A.q3.includes(v))A.q3.push(v)}else{A.q3=A.q3.filter(x=>x!==v)}}
+}
+
 // Legacy sel (kept for compatibility)
 function sel(el,q,v){pickAndNext(el,q,v)}
 
@@ -317,7 +337,7 @@ window.scrollTo({top:0,behavior:'smooth'});
 // Fetch data from backend
 try{
 const r=await fetch(API+'/api/query',{method:'POST',headers:{'Content-Type':'application/json'},
-body:JSON.stringify({q1:A.q1,q2:A.q2,q3:A.q3,q4:A.q4,q5:A.q5,q6:A.q6,skip_personalize:true})});
+body:JSON.stringify({q1:A.q1,q2:A.q2,q3:A.q3.length>1?'multiple':A.q3[0]||'none',q4:A.q4,q5:A.q5,q6:A.q6,persona_tags:A.persona,skip_personalize:true})});
 DATA=await r.json();
 }catch(e){DATA=demoDB()}
 
