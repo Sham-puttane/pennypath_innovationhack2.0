@@ -58,10 +58,25 @@ body{font-family:'Inter',sans-serif;background:#0a0a0a;color:#fff;overflow-x:hid
 <div id="phaseForm">
 <div class="max-w-lg mx-auto">
 <div class="flex justify-center gap-3 mb-10">
-<div class="pdot active" data-s="0"></div><div class="pdot" data-s="1"></div><div class="pdot" data-s="2"></div><div class="pdot" data-s="3"></div><div class="pdot" data-s="4"></div><div class="pdot" data-s="5"></div>
+<div class="pdot active" data-s="0"></div><div class="pdot" data-s="1"></div><div class="pdot" data-s="2"></div><div class="pdot" data-s="3"></div><div class="pdot" data-s="4"></div><div class="pdot" data-s="5"></div><div class="pdot" data-s="6"></div>
 </div>
 <h1 class="font-serif text-3xl md:text-4xl font-bold mb-2 text-center">Build Your Plan</h1>
-<p class="text-[#666] text-center mb-10 text-sm">Answer 6 questions. Get your personalized financial order of operations.</p>
+<p class="text-[#666] text-center mb-10 text-sm">Tell us about yourself. Get your personalized financial order of operations.</p>
+
+<!-- Persona selector -->
+<div class="mb-10"><label class="block text-sm font-semibold mb-3">Which of these best describes you?</label>
+<div class="flex flex-wrap gap-2" id="personaGroup">
+<label class="opt" onclick="sel(this,'persona','gig_worker')" style="flex:0 0 auto;padding:10px 16px"><span class="dot"></span><input type="radio" name="persona" value="gig_worker">&#x1F477; Gig Worker</label>
+<label class="opt" onclick="sel(this,'persona','recent_immigrant')" style="flex:0 0 auto;padding:10px 16px"><span class="dot"></span><input type="radio" name="persona" value="recent_immigrant">&#x1F30D; Recent Immigrant</label>
+<label class="opt" onclick="sel(this,'persona','international_student')" style="flex:0 0 auto;padding:10px 16px"><span class="dot"></span><input type="radio" name="persona" value="international_student">&#x1F393; International Student</label>
+<label class="opt" onclick="sel(this,'persona','single_parent')" style="flex:0 0 auto;padding:10px 16px"><span class="dot"></span><input type="radio" name="persona" value="single_parent">&#x1F464; Single Parent</label>
+<label class="opt" onclick="sel(this,'persona','first_gen_college_student')" style="flex:0 0 auto;padding:10px 16px"><span class="dot"></span><input type="radio" name="persona" value="first_gen_college_student">&#x1F4DA; First-Gen Student</label>
+<label class="opt" onclick="sel(this,'persona','unbanked')" style="flex:0 0 auto;padding:10px 16px"><span class="dot"></span><input type="radio" name="persona" value="unbanked">&#x1F3E6; Unbanked</label>
+<label class="opt" onclick="sel(this,'persona','veteran')" style="flex:0 0 auto;padding:10px 16px"><span class="dot"></span><input type="radio" name="persona" value="veteran">&#x1F396;&#xFE0F; Veteran</label>
+<label class="opt" onclick="sel(this,'persona','reentry')" style="flex:0 0 auto;padding:10px 16px"><span class="dot"></span><input type="radio" name="persona" value="reentry">&#x1F504; Reentry</label>
+<label class="opt" onclick="sel(this,'persona','general')" style="flex:0 0 auto;padding:10px 16px"><span class="dot"></span><input type="radio" name="persona" value="general">&#x2B50; General Path</label>
+</div>
+</div>
 
 <div class="mb-8"><label class="block text-sm font-semibold mb-3">Q1: Do you have a bank account?</label>
 <div class="space-y-2" id="q1g">
@@ -72,10 +87,11 @@ body{font-family:'Inter',sans-serif;background:#0a0a0a;color:#fff;overflow-x:hid
 
 <div class="mb-8"><label class="block text-sm font-semibold mb-3">Q2: How do you get paid?</label>
 <div class="space-y-2" id="q2g">
-<label class="opt" onclick="sel(this,'q2','salary')"><span class="dot"></span><input type="radio" name="q2" value="salary">Salary</label>
-<label class="opt" onclick="sel(this,'q2','gig')"><span class="dot"></span><input type="radio" name="q2" value="gig">Gig work</label>
-<label class="opt" onclick="sel(this,'q2','cash')"><span class="dot"></span><input type="radio" name="q2" value="cash">Cash</label>
-<label class="opt" onclick="sel(this,'q2','irregular')"><span class="dot"></span><input type="radio" name="q2" value="irregular">Irregular</label>
+<label class="opt" onclick="sel(this,'q2','salary')"><span class="dot"></span><input type="radio" name="q2" value="salary">Steady salary or wages (W-2, direct deposit)</label>
+<label class="opt" onclick="sel(this,'q2','gig')"><span class="dot"></span><input type="radio" name="q2" value="gig">Gig work or freelance (Uber, DoorDash, side jobs)</label>
+<label class="opt" onclick="sel(this,'q2','cash')"><span class="dot"></span><input type="radio" name="q2" value="cash">Paid in cash</label>
+<label class="opt" onclick="sel(this,'q2','irregular')"><span class="dot"></span><input type="radio" name="q2" value="irregular">Irregular or seasonal income</label>
+<label class="opt" onclick="sel(this,'q2','none')"><span class="dot"></span><input type="radio" name="q2" value="irregular">Not currently earning</label>
 </div></div>
 
 <div class="mb-8"><label class="block text-sm font-semibold mb-3">Q3: Do you have debt? What kind?</label>
@@ -174,13 +190,17 @@ body{font-family:'Inter',sans-serif;background:#0a0a0a;color:#fff;overflow-x:hid
 
 <script>
 const API='http://localhost:5000';
-const A={q1:null,q2:null,q3:null,q4:null,q5:[],q6:''};
+const A={persona:null,q1:null,q2:null,q3:null,q4:null,q5:[],q6:''};
 let DATA=null,NET=null,NET2=null;
 const CM={purple:'#9333ea',red:'#ef4444',green:'#22c55e',amber:'#eab308',info:'#9333ea',gray:'#666'};
 const CLABEL={purple:'Entry',red:'Risk',green:'Action',amber:'Resource',info:'Entry',gray:'Other'};
 
 // ─── Form ───────────────────────────────────────────────────────
-function sel(el,q,v){document.querySelectorAll(`#${q}g .opt`).forEach(o=>o.classList.remove('selected'));el.classList.add('selected');A[q]=v;ud()}
+function sel(el,q,v){
+const grp=q==='persona'?'#personaGroup':('#'+q+'g');
+document.querySelectorAll(grp+' .opt').forEach(o=>o.classList.remove('selected'));
+el.classList.add('selected');A[q]=v;ud();
+}
 function chk(el,v){
 el.classList.toggle('selected');
 if(v==='none'){A.q5=['none'];document.querySelectorAll('#q5g .opt').forEach(o=>o.classList.remove('selected'));el.classList.add('selected')}
@@ -188,8 +208,8 @@ else{document.querySelector('#q5g .opt:last-child').classList.remove('selected')
 if(el.classList.contains('selected')){if(!A.q5.includes(v))A.q5.push(v)}else{A.q5=A.q5.filter(x=>x!==v)}}
 ud()}
 function ud(){
-const f=[A.q1,A.q2,A.q3,A.q4,A.q5.length>0];
-document.querySelectorAll('.pdot').forEach((d,i)=>{d.className='pdot'+(i<5?(f[i]?' done':''):(f.every(Boolean)?' active':''))});
+const f=[A.persona,A.q1,A.q2,A.q3,A.q4,A.q5.length>0];
+document.querySelectorAll('.pdot').forEach((d,i)=>{d.className='pdot'+(i<6?(f[i]?' done':''):(f.every(Boolean)?' active':''))});
 document.getElementById('submitBtn').disabled=!f.every(Boolean);
 }
 
