@@ -119,7 +119,7 @@ body{font-family:'Inter',sans-serif;background:#0a0a0a;color:#fff;overflow-x:hid
 <h2 class="font-serif text-2xl font-bold">Discovering your path...</h2>
 <p class="text-[#555] text-sm mt-1" id="traversalStatus">Traversing knowledge graph</p>
 </div>
-<div id="graphContainer" class="rounded-xl border border-[#1a1a1a] bg-[#060606] mx-auto" style="height:65vh;max-height:600px"></div>
+<div id="graphContainer" class="rounded-xl border border-[#1a1a1a] bg-[#060606] mx-auto" style="height:75vh;max-height:700px"></div>
 <div class="flex items-center justify-center gap-5 mt-3 text-[10px] text-[#555]">
 <span><span class="legend-dot" style="background:#9333ea"></span> Entry</span>
 <span><span class="legend-dot" style="background:#ef4444"></span> Risk</span>
@@ -206,93 +206,183 @@ renderTraversalGraph(DATA.graph,DATA.steps);
 // ─── Traversal Graph (Phase 2) ──────────────────────────────────
 function renderTraversalGraph(g,steps){
 const c=document.getElementById('graphContainer');
+// Base sizes for reference
+const BASE=8;
 const nodesData=g.nodes.map(n=>({
 id:n.id,label:n.label||n.id.substring(0,20),
-color:{background:'rgba(60,60,60,.3)',border:'transparent'},
-font:{color:'rgba(150,150,150,.2)',size:9},
-size:n.size||10,borderWidth:0,opacity:.3,
+color:{background:'rgba(80,80,80,.35)',border:'rgba(60,60,60,.2)'},
+font:{color:'rgba(150,150,150,.25)',size:8},
+size:BASE+2,borderWidth:0,
 shadow:false,
-_origColor:CM[n.color]||'#555'
+_origColor:CM[n.color]||'#555',_baseSize:n.size||BASE
 }));
 const edgesData=g.edges.map((e,i)=>({
 id:i,from:e.from,to:e.to,
-color:{color:'rgba(80,80,80,.08)'},
-width:1,smooth:{type:'continuous'},
+color:{color:'rgba(80,80,80,.12)'},
+width:0.8,smooth:{type:'continuous'},
 _origFrom:e.from,_origTo:e.to
 }));
 const nodes=new vis.DataSet(nodesData);
 const edges=new vis.DataSet(edgesData);
 
 NET=new vis.Network(c,{nodes,edges},{
-physics:{solver:'forceAtlas2Based',forceAtlas2Based:{gravitationalConstant:-50,springLength:100,springConstant:.03},
-stabilization:{iterations:80,fit:true}},
-interaction:{dragNodes:false,zoomView:true,dragView:true},
+physics:{solver:'forceAtlas2Based',forceAtlas2Based:{gravitationalConstant:-60,springLength:130,springConstant:.025},
+stabilization:{iterations:100,fit:true}},
+interaction:{dragNodes:false,zoomView:true,dragView:true,hover:false},
 nodes:{shape:'dot'},edges:{arrows:{to:{enabled:false}}}
 });
 
-// Stop physics after stabilization to prevent lag
-NET.once('stabilized',()=>{
+// Start animation after stabilization OR 3s timeout (whichever first)
+let animStarted=false;
+function startAnim(){
+if(animStarted)return;
+animStarted=true;
 NET.setOptions({physics:false});
-// Start hop-by-hop traversal animation
-animateTraversal(nodes,edges,steps);
-});
+runTraversalAnimation(nodes,edges,steps);
+}
+NET.once('stabilized',startAnim);
+setTimeout(startAnim,3000);
 }
 
-function animateTraversal(nodes,edges,steps){
-// Collect all traversal node IDs from steps
-const traversalNodes=[];
-steps.forEach(s=>{(s.source_nodes||[]).forEach(n=>{if(!traversalNodes.includes(n))traversalNodes.push(n)})});
-
-const statuses=['Mapping entity clusters','Scoring relevance paths','Applying FOO rule engine','Ordering priority queue','Finalizing your plan'];
-let si=0;
+function runTraversalAnimation(nodes,edges,steps){
 const statusEl=document.getElementById('traversalStatus');
+const visited=new Set();
 
+// Collect entry nodes (from step source_nodes, first 2 steps typically = entry)
+const entryNodes=[];
+const allTraversalNodes=[];
+steps.forEach((s,i)=>{
+(s.source_nodes||[]).forEach(n=>{
+if(!allTraversalNodes.includes(n)&&nodes.get(n))allTraversalNodes.push(n);
+if(i<2&&!entryNodes.includes(n)&&nodes.get(n))entryNodes.push(n);
+});
+});
+
+// Build step-to-nodes mapping for hop sequence
+const hopSequence=[];
+steps.forEach(s=>{
+const stepNodes=(s.source_nodes||[]).filter(n=>nodes.get(n));
+if(stepNodes.length)hopSequence.push({step:s,nodes:stepNodes});
+});
+
+const totalHops=hopSequence.length;
+const hopDelay=Math.max(500,Math.min(900,8000/Math.max(totalHops,1)));
+
+// ─── PHASE A: Highlight entry nodes (2s) ────────────────────
+statusEl.textContent='Identifying your profile...';
+let entryIdx=0;
+function showEntry(){
+if(entryIdx>=entryNodes.length){
+setTimeout(startHops,800);
+return;
+}
+const nid=entryNodes[entryIdx];
+const nd=nodes.get(nid);
+if(nd){
+nodes.update({id:nid,
+size:nd._baseSize*2.5,
+color:{background:nd._origColor,border:'#fff'},
+font:{color:'#fff',size:12,bold:true},
+borderWidth:3,
+shadow:{enabled:true,color:nd._origColor+'60',size:25}
+});
+visited.add(nid);
+}
+entryIdx++;
+setTimeout(showEntry,350);
+}
+setTimeout(showEntry,600);
+
+// ─── PHASE B: Hop through each step's nodes ─────────────────
 let hopIdx=0;
-const hopDelay=Math.max(400,Math.min(800,7000/Math.max(traversalNodes.length,1)));
+let prevActiveNodes=[];
 
-function illuminateHop(){
-if(hopIdx>=traversalNodes.length){
-// Traversal complete — transition to results
+function startHops(){hopNext()}
+
+function hopNext(){
+if(hopIdx>=hopSequence.length){
 statusEl.textContent='Path discovered. Building your queue...';
-setTimeout(()=>showResults(),1200);
+// Settle all nodes to final state
+allTraversalNodes.forEach(nid=>{
+const nd=nodes.get(nid);
+if(nd){
+nodes.update({id:nid,
+size:nd._baseSize*1.5,
+color:{background:nd._origColor,border:'rgba(255,255,255,.2)'},
+font:{color:'#bbb',size:10},
+borderWidth:1,
+shadow:{enabled:true,color:nd._origColor+'30',size:10}
+});
+}
+});
+setTimeout(()=>showResults(),1500);
 return;
 }
 
-const nid=traversalNodes[hopIdx];
-// Light up node
-try{
-const orig=nodes.get(nid);
-if(orig){
+const hop=hopSequence[hopIdx];
+const stepLabel=hop.step.action;
+statusEl.textContent=`Step ${hop.step.step_number}: ${stepLabel.substring(0,50)}...`;
+
+// Dim previous active nodes back to "visited" state
+prevActiveNodes.forEach(nid=>{
+const nd=nodes.get(nid);
+if(nd){
 nodes.update({id:nid,
-color:{background:orig._origColor,border:'rgba(255,255,255,.6)'},
-font:{color:'#ddd',size:11},
-size:(orig.size||10)+4,
-borderWidth:2,opacity:1,
-shadow:{enabled:true,color:orig._origColor+'40',size:15}
+size:nd._baseSize*1.5,
+color:{background:nd._origColor,border:'rgba(255,255,255,.15)'},
+font:{color:'rgba(200,200,200,.6)',size:9},
+borderWidth:1,
+shadow:{enabled:true,color:nd._origColor+'20',size:8}
 });
-}
-}catch(e){}
-
-// Light up connected edges
-edges.forEach(e=>{
-if(e._origFrom===nid||e._origTo===nid){
-const other=e._origFrom===nid?e._origTo:e._origFrom;
-const otherLit=traversalNodes.slice(0,hopIdx+1).includes(other);
-if(otherLit){
-edges.update({id:e.id,color:{color:'rgba(147,51,234,.5)'},width:2});
-}
 }
 });
 
-// Update status text
-if(hopIdx%3===0){statusEl.textContent=statuses[si%statuses.length];si++}
+prevActiveNodes=[];
 
+// Illuminate this hop's nodes one by one
+let ni=0;
+function lightNode(){
+if(ni>=hop.nodes.length){
 hopIdx++;
-setTimeout(illuminateHop,hopDelay);
+setTimeout(hopNext,hopDelay*0.4);
+return;
 }
+const nid=hop.nodes[ni];
+const nd=nodes.get(nid);
+if(nd){
+// Active node: large, bright, glowing
+nodes.update({id:nid,
+size:nd._baseSize*2.8,
+color:{background:nd._origColor,border:'#fff'},
+font:{color:'#fff',size:13,bold:true},
+borderWidth:3,
+shadow:{enabled:true,color:nd._origColor+'70',size:30}
+});
+prevActiveNodes.push(nid);
 
-// Start after a brief pause
-setTimeout(illuminateHop,800);
+// Light up edges to any already-visited node
+edges.forEach(e=>{
+if((e._origFrom===nid||e._origTo===nid)){
+const other=e._origFrom===nid?e._origTo:e._origFrom;
+if(visited.has(other)){
+edges.update({id:e.id,
+color:{color:nd._origColor+'90'},
+width:2.5,
+dashes:[8,4] // animated dash effect
+});
+}
+}
+});
+visited.add(nid);
+
+// Focus camera on this node
+try{NET.focus(nid,{scale:1.2,animation:{duration:300,easingFunction:'easeInOutQuad'}})}catch(e){}
+}
+ni++;
+setTimeout(lightNode,250);
+}
+lightNode();
+}
 }
 
 // ─── Results (Phase 3) ──────────────────────────────────────────
