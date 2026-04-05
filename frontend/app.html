@@ -601,10 +601,11 @@ window.scrollTo({top:0,behavior:'smooth'});
 
 // Profile bar
 const d=DATA;
-const pl=d.persona.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+const tags=(d.persona_tags||[d.persona]).map(t=>t.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase()));
+const personaChips=tags.map(t=>`<span class="chip" style="background:rgba(147,51,234,.2);border-color:rgba(147,51,234,.4);color:#a855f7;font-weight:600">${t}</span>`).join('');
 const gaps=d.protection_gaps.map(g=>`<span class="chip">${g}</span>`).join('');
 document.getElementById('profileBar').innerHTML=`<div class="slide-up p-4 rounded-xl bg-[#0e0e0e] border border-[#1a1a1a] flex flex-wrap items-center gap-3">
-<span class="chip" style="background:rgba(147,51,234,.2);border-color:rgba(147,51,234,.4);color:#a855f7;font-weight:600">${pl}</span>
+${personaChips}
 ${d.protection_gaps.length?'<span class="text-xs text-[#555]">Missing:</span>'+gaps:''}
 </div>`;
 

@@ -236,6 +236,7 @@ def query():
             "q1": data.get("q1", "yes"), "q2": data.get("q2", "salary"),
             "q3": data.get("q3", "none"), "q4": data.get("q4", "nothing"),
             "q5": data.get("q5", ["none"]), "q6": data.get("q6"),
+            "persona_tags": data.get("persona_tags"),
         }
 
     # Step 1: Graph traversal (this is the only GraphRAG call)
@@ -270,6 +271,7 @@ def query():
         "session_id": session_id,
         "profile": traversal["profile"],
         "persona": traversal["persona"],
+        "persona_tags": traversal.get("persona_tags", [traversal["persona"]]),
         "protection_gaps": traversal["protection_gaps"],
         "steps": steps,
         "graph": viz,

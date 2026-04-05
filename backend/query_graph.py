@@ -313,8 +313,8 @@ class GraphQuery:
         # Return highest-scoring persona
         return max(scores, key=scores.get)
 
-    def traverse_from_profile(self, q1, q2, q3, q4, q5, q6=None) -> dict:
-        """Main query: map Q1-Q5 answers to entry nodes, traverse graph."""
+    def traverse_from_profile(self, q1, q2, q3, q4, q5, q6=None, persona_tags=None) -> dict:
+        """Main query: map Q1-Q5 answers + persona tags to entry nodes, traverse graph."""
         keywords = []
         keywords.extend(Q1_MAP.get(q1, []))
         keywords.extend(Q2_MAP.get(q2, []))
@@ -322,6 +322,12 @@ class GraphQuery:
         keywords.extend(Q4_MAP.get(q4, []))
         for ins in q5:
             keywords.extend(Q5_MAP.get(ins, []))
+
+        # Add persona-specific entity clusters to entry keywords
+        if persona_tags:
+            for tag in persona_tags:
+                cluster = PERSONA_ENTITY_CLUSTERS.get(tag, [])
+                keywords.extend(cluster)
 
         entry_nodes = self._find_entry_nodes(keywords)
 
@@ -341,14 +347,18 @@ class GraphQuery:
             "free_text": q6,
         }
 
-        # Persona determined by graph entity clusters, not hardcoded
-        persona = self._determine_persona(traversal, q1, q2, q3)
+        # Use user-selected personas if provided, else detect from graph
+        if persona_tags and len(persona_tags) > 0:
+            persona = persona_tags[0]  # primary persona for FOO (doesn't affect ordering)
+        else:
+            persona = self._determine_persona(traversal, q1, q2, q3)
 
         protection_gaps = self._find_protection_gaps(q5)
 
         return {
             "profile": profile,
             "persona": persona,
+            "persona_tags": persona_tags or [persona],
             "protection_gaps": protection_gaps,
             "entry_nodes": traversal["entry_nodes"],
             "risk_nodes": traversal["risk_nodes"],
