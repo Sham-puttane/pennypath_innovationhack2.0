@@ -15,14 +15,14 @@ tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sans-serif'],serif:['
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Inter',sans-serif;background:#0a0a0a;color:#fff;overflow-x:hidden}
-.opt{display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:12px;border:1.5px solid #1a1a1a;background:#0e0e0e;cursor:pointer;transition:all .25s;font-size:14px}
-.opt:hover{border-color:#333}
-.opt.selected{border-color:#9333ea;background:rgba(147,51,234,.08);box-shadow:0 0 20px rgba(147,51,234,.1)}
+.opt{display:flex;align-items:center;gap:12px;padding:14px 18px;border-radius:14px;border:1.5px solid rgba(147,51,234,.12);background:rgba(147,51,234,.04);cursor:pointer;transition:all .3s;font-size:14px;backdrop-filter:blur(4px)}
+.opt:hover{border-color:rgba(147,51,234,.35);background:rgba(147,51,234,.08);box-shadow:0 0 25px rgba(147,51,234,.08)}
+.opt.selected{border-color:#9333ea;background:rgba(147,51,234,.15);box-shadow:0 0 30px rgba(147,51,234,.2),inset 0 0 20px rgba(147,51,234,.05)}
 .opt input{display:none}
-.opt .dot{width:18px;height:18px;border-radius:50%;border:2px solid #333;transition:all .2s;flex-shrink:0}
-.opt.selected .dot{border-color:#9333ea;background:#9333ea;box-shadow:0 0 8px rgba(147,51,234,.4)}
-.opt .chk{width:18px;height:18px;border-radius:5px;border:2px solid #333;transition:all .2s;flex-shrink:0;display:flex;align-items:center;justify-content:center}
-.opt.selected .chk{border-color:#9333ea;background:#9333ea}
+.opt .dot{width:20px;height:20px;border-radius:50%;border:2px solid rgba(147,51,234,.3);transition:all .3s;flex-shrink:0;background:rgba(147,51,234,.05)}
+.opt.selected .dot{border-color:#9333ea;background:#9333ea;box-shadow:0 0 12px rgba(147,51,234,.5)}
+.opt .chk{width:20px;height:20px;border-radius:6px;border:2px solid rgba(147,51,234,.3);transition:all .3s;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:rgba(147,51,234,.05)}
+.opt.selected .chk{border-color:#9333ea;background:#9333ea;box-shadow:0 0 12px rgba(147,51,234,.5)}
 .opt.selected .chk::after{content:'';display:block;width:5px;height:9px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg);margin-top:-2px}
 .pdot{width:10px;height:10px;border-radius:50%;background:#1a1a1a;transition:all .3s}
 .pdot.active{background:#9333ea;box-shadow:0 0 10px rgba(147,51,234,.5)}
@@ -41,6 +41,20 @@ body{font-family:'Inter',sans-serif;background:#0a0a0a;color:#fff;overflow-x:hid
 @keyframes slideUp{from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:translateY(0)}}
 /* Graph container - stable height prevents reflow */
 #graphContainer{contain:layout style;will-change:contents}
+/* Step wizard */
+.step-page{animation:stepIn .45s cubic-bezier(.16,1,.3,1) both}
+.step-page.hidden{display:none}
+@keyframes stepIn{from{opacity:0;transform:translateX(50px) scale(.97)}to{opacity:1;transform:translateX(0) scale(1)}}
+@keyframes stepOut{from{opacity:1;transform:translateX(0)}to{opacity:0;transform:translateX(-50px) scale(.97)}}
+/* Question card wrapper */
+.q-card-wrap{background:rgba(147,51,234,.03);border:1px solid rgba(147,51,234,.1);border-radius:20px;padding:28px 24px;position:relative;overflow:hidden}
+.q-card-wrap::before{content:'';position:absolute;top:0;left:20%;right:20%;height:1px;background:linear-gradient(90deg,transparent,rgba(147,51,234,.2),transparent)}
+/* Progress bar segments */
+.prog-seg{height:4px;border-radius:4px;background:#1a1a1a;flex:1;transition:all .5s ease;overflow:hidden;position:relative}
+.prog-seg.done{background:linear-gradient(90deg,#7c3aed,#9333ea)}
+.prog-seg.active{background:#1a1a1a;box-shadow:0 0 8px rgba(147,51,234,.2)}
+.prog-seg.active::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,#7c3aed,#a855f7);animation:progPulse 1.5s ease infinite}
+@keyframes progPulse{0%,100%{opacity:.5}50%{opacity:1}}
 </style>
 </head>
 <body>
@@ -54,78 +68,130 @@ body{font-family:'Inter',sans-serif;background:#0a0a0a;color:#fff;overflow-x:hid
 
 <main class="pt-20 pb-16 px-4 max-w-6xl mx-auto">
 
-<!-- ═══ PHASE 1: INTAKE FORM ═══ -->
+<!-- ═══ PHASE 1: STEP-BY-STEP INTAKE ═══ -->
 <div id="phaseForm">
-<div class="max-w-lg mx-auto">
-<div class="flex justify-center gap-3 mb-10">
-<div class="pdot active" data-s="0"></div><div class="pdot" data-s="1"></div><div class="pdot" data-s="2"></div><div class="pdot" data-s="3"></div><div class="pdot" data-s="4"></div><div class="pdot" data-s="5"></div><div class="pdot" data-s="6"></div>
-</div>
-<h1 class="font-serif text-3xl md:text-4xl font-bold mb-2 text-center">Build Your Plan</h1>
-<p class="text-[#666] text-center mb-10 text-sm">Tell us about yourself. Get your personalized financial order of operations.</p>
+<div class="max-w-lg mx-auto min-h-[70vh] flex flex-col justify-center relative">
+<!-- Purple ambient glows -->
+<div class="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full pointer-events-none" style="background:radial-gradient(circle,rgba(147,51,234,.15) 0%,rgba(147,51,234,.05) 40%,transparent 70%)"></div>
+<div class="absolute bottom-0 left-1/4 w-[300px] h-[300px] rounded-full pointer-events-none" style="background:radial-gradient(circle,rgba(147,51,234,.08) 0%,transparent 70%)"></div>
 
-<!-- Persona selector -->
-<div class="mb-10"><label class="block text-sm font-semibold mb-3">Which of these best describes you?</label>
-<div class="flex flex-wrap gap-2" id="personaGroup">
-<label class="opt" onclick="sel(this,'persona','gig_worker')" style="flex:0 0 auto;padding:10px 16px"><span class="dot"></span><input type="radio" name="persona" value="gig_worker">&#x1F477; Gig Worker</label>
-<label class="opt" onclick="sel(this,'persona','recent_immigrant')" style="flex:0 0 auto;padding:10px 16px"><span class="dot"></span><input type="radio" name="persona" value="recent_immigrant">&#x1F30D; Recent Immigrant</label>
-<label class="opt" onclick="sel(this,'persona','international_student')" style="flex:0 0 auto;padding:10px 16px"><span class="dot"></span><input type="radio" name="persona" value="international_student">&#x1F393; International Student</label>
-<label class="opt" onclick="sel(this,'persona','single_parent')" style="flex:0 0 auto;padding:10px 16px"><span class="dot"></span><input type="radio" name="persona" value="single_parent">&#x1F464; Single Parent</label>
-<label class="opt" onclick="sel(this,'persona','first_gen_college_student')" style="flex:0 0 auto;padding:10px 16px"><span class="dot"></span><input type="radio" name="persona" value="first_gen_college_student">&#x1F4DA; First-Gen Student</label>
-<label class="opt" onclick="sel(this,'persona','unbanked')" style="flex:0 0 auto;padding:10px 16px"><span class="dot"></span><input type="radio" name="persona" value="unbanked">&#x1F3E6; Unbanked</label>
-<label class="opt" onclick="sel(this,'persona','veteran')" style="flex:0 0 auto;padding:10px 16px"><span class="dot"></span><input type="radio" name="persona" value="veteran">&#x1F396;&#xFE0F; Veteran</label>
-<label class="opt" onclick="sel(this,'persona','reentry')" style="flex:0 0 auto;padding:10px 16px"><span class="dot"></span><input type="radio" name="persona" value="reentry">&#x1F504; Reentry</label>
-<label class="opt" onclick="sel(this,'persona','general')" style="flex:0 0 auto;padding:10px 16px"><span class="dot"></span><input type="radio" name="persona" value="general">&#x2B50; General Path</label>
-</div>
+<!-- Step counter -->
+<div class="text-center mb-8 relative z-10">
+<div class="inline-block px-4 py-1 rounded-full text-[11px] font-semibold tracking-[2px] uppercase mb-3" style="background:rgba(147,51,234,.12);border:1px solid rgba(147,51,234,.25);color:#a855f7" id="stepLabel">Step 1 of 7</div>
+<h1 class="font-serif text-3xl md:text-4xl font-bold">Build Your Plan</h1>
 </div>
 
-<div class="mb-8"><label class="block text-sm font-semibold mb-3">Q1: Do you have a bank account?</label>
-<div class="space-y-2" id="q1g">
-<label class="opt" onclick="sel(this,'q1','yes')"><span class="dot"></span><input type="radio" name="q1" value="yes">Yes</label>
-<label class="opt" onclick="sel(this,'q1','no')"><span class="dot"></span><input type="radio" name="q1" value="no">No</label>
-<label class="opt" onclick="sel(this,'q1','have_but_dont_use')"><span class="dot"></span><input type="radio" name="q1" value="have_but_dont_use">Have but don't use</label>
+<!-- Question container (one at a time) -->
+<div class="relative z-10" id="questionArea" style="min-height:320px">
+
+<!-- Step 0: Persona -->
+<div class="step-page" data-step="0">
+<div class="q-card-wrap">
+<label class="block text-base font-semibold mb-5 text-center">Which of these best describes you?</label>
+<div class="flex flex-wrap justify-center gap-2" id="personaGroup">
+<label class="opt" onclick="pickAndNext(this,'persona','gig_worker')" style="flex:0 0 auto;padding:10px 16px"><span class="dot"></span>&#x1F477; Gig Worker</label>
+<label class="opt" onclick="pickAndNext(this,'persona','recent_immigrant')" style="flex:0 0 auto;padding:10px 16px"><span class="dot"></span>&#x1F30D; Recent Immigrant</label>
+<label class="opt" onclick="pickAndNext(this,'persona','international_student')" style="flex:0 0 auto;padding:10px 16px"><span class="dot"></span>&#x1F393; International Student</label>
+<label class="opt" onclick="pickAndNext(this,'persona','single_parent')" style="flex:0 0 auto;padding:10px 16px"><span class="dot"></span>&#x1F464; Single Parent</label>
+<label class="opt" onclick="pickAndNext(this,'persona','first_gen_college_student')" style="flex:0 0 auto;padding:10px 16px"><span class="dot"></span>&#x1F4DA; First-Gen Student</label>
+<label class="opt" onclick="pickAndNext(this,'persona','unbanked')" style="flex:0 0 auto;padding:10px 16px"><span class="dot"></span>&#x1F3E6; Unbanked</label>
+<label class="opt" onclick="pickAndNext(this,'persona','veteran')" style="flex:0 0 auto;padding:10px 16px"><span class="dot"></span>&#x1F396;&#xFE0F; Veteran</label>
+<label class="opt" onclick="pickAndNext(this,'persona','reentry')" style="flex:0 0 auto;padding:10px 16px"><span class="dot"></span>&#x1F504; Reentry</label>
+<label class="opt" onclick="pickAndNext(this,'persona','general')" style="flex:0 0 auto;padding:10px 16px"><span class="dot"></span>&#x2B50; General Path</label>
+</div>
 </div></div>
 
-<div class="mb-8"><label class="block text-sm font-semibold mb-3">Q2: How do you get paid?</label>
-<div class="space-y-2" id="q2g">
-<label class="opt" onclick="sel(this,'q2','salary')"><span class="dot"></span><input type="radio" name="q2" value="salary">Steady salary or wages (W-2, direct deposit)</label>
-<label class="opt" onclick="sel(this,'q2','gig')"><span class="dot"></span><input type="radio" name="q2" value="gig">Gig work or freelance (Uber, DoorDash, side jobs)</label>
-<label class="opt" onclick="sel(this,'q2','cash')"><span class="dot"></span><input type="radio" name="q2" value="cash">Paid in cash</label>
-<label class="opt" onclick="sel(this,'q2','irregular')"><span class="dot"></span><input type="radio" name="q2" value="irregular">Irregular or seasonal income</label>
-<label class="opt" onclick="sel(this,'q2','none')"><span class="dot"></span><input type="radio" name="q2" value="irregular">Not currently earning</label>
+<!-- Step 1: Q1 -->
+<div class="step-page hidden" data-step="1"><div class="q-card-wrap">
+<label class="block text-base font-semibold mb-5 text-center">Do you have a bank account?</label>
+<div class="space-y-3" id="q1g">
+<label class="opt" onclick="pickAndNext(this,'q1','yes')"><span class="dot"></span>Yes</label>
+<label class="opt" onclick="pickAndNext(this,'q1','no')"><span class="dot"></span>No</label>
+<label class="opt" onclick="pickAndNext(this,'q1','have_but_dont_use')"><span class="dot"></span>Have but don't use</label>
+</div>
 </div></div>
 
-<div class="mb-8"><label class="block text-sm font-semibold mb-3">Q3: Do you have debt? What kind?</label>
-<div class="space-y-2" id="q3g">
-<label class="opt" onclick="sel(this,'q3','none')"><span class="dot"></span><input type="radio" name="q3" value="none">None</label>
-<label class="opt" onclick="sel(this,'q3','credit_card')"><span class="dot"></span><input type="radio" name="q3" value="credit_card">Credit card</label>
-<label class="opt" onclick="sel(this,'q3','student')"><span class="dot"></span><input type="radio" name="q3" value="student">Student loans</label>
-<label class="opt" onclick="sel(this,'q3','medical')"><span class="dot"></span><input type="radio" name="q3" value="medical">Medical</label>
-<label class="opt" onclick="sel(this,'q3','multiple')"><span class="dot"></span><input type="radio" name="q3" value="multiple">Multiple types</label>
+<!-- Step 2: Q2 -->
+<div class="step-page hidden" data-step="2"><div class="q-card-wrap">
+<label class="block text-base font-semibold mb-5 text-center">How do you get paid?</label>
+<div class="space-y-3" id="q2g">
+<label class="opt" onclick="pickAndNext(this,'q2','salary')"><span class="dot"></span>Steady salary or wages (W-2, direct deposit)</label>
+<label class="opt" onclick="pickAndNext(this,'q2','gig')"><span class="dot"></span>Gig work or freelance (Uber, DoorDash, side jobs)</label>
+<label class="opt" onclick="pickAndNext(this,'q2','cash')"><span class="dot"></span>Paid in cash</label>
+<label class="opt" onclick="pickAndNext(this,'q2','irregular')"><span class="dot"></span>Irregular or seasonal income</label>
+<label class="opt" onclick="pickAndNext(this,'q2','irregular')"><span class="dot"></span>Not currently earning</label>
+</div>
 </div></div>
 
-<div class="mb-8"><label class="block text-sm font-semibold mb-3">Q4: How much have you saved?</label>
-<div class="space-y-2" id="q4g">
-<label class="opt" onclick="sel(this,'q4','nothing')"><span class="dot"></span><input type="radio" name="q4" value="nothing">Nothing</label>
-<label class="opt" onclick="sel(this,'q4','under_500')"><span class="dot"></span><input type="radio" name="q4" value="under_500">Under $500</label>
-<label class="opt" onclick="sel(this,'q4','500_to_1000')"><span class="dot"></span><input type="radio" name="q4" value="500_to_1000">$500 - $1,000</label>
-<label class="opt" onclick="sel(this,'q4','1000_to_5000')"><span class="dot"></span><input type="radio" name="q4" value="1000_to_5000">$1,000 - $5,000</label>
-<label class="opt" onclick="sel(this,'q4','over_5000')"><span class="dot"></span><input type="radio" name="q4" value="over_5000">Over $5,000</label>
+<!-- Step 3: Q3 -->
+<div class="step-page hidden" data-step="3"><div class="q-card-wrap">
+<label class="block text-base font-semibold mb-5 text-center">Do you have debt? What kind?</label>
+<div class="space-y-3" id="q3g">
+<label class="opt" onclick="pickAndNext(this,'q3','none')"><span class="dot"></span>None</label>
+<label class="opt" onclick="pickAndNext(this,'q3','credit_card')"><span class="dot"></span>Credit card</label>
+<label class="opt" onclick="pickAndNext(this,'q3','student')"><span class="dot"></span>Student loans</label>
+<label class="opt" onclick="pickAndNext(this,'q3','medical')"><span class="dot"></span>Medical</label>
+<label class="opt" onclick="pickAndNext(this,'q3','multiple')"><span class="dot"></span>Multiple types</label>
+</div>
 </div></div>
 
-<div class="mb-8"><label class="block text-sm font-semibold mb-3">Q5: Do you have insurance? <span class="text-[#666] font-normal">(select all)</span></label>
-<div class="space-y-2" id="q5g">
+<!-- Step 4: Q4 -->
+<div class="step-page hidden" data-step="4"><div class="q-card-wrap">
+<label class="block text-base font-semibold mb-5 text-center">How much have you saved?</label>
+<div class="space-y-3" id="q4g">
+<label class="opt" onclick="pickAndNext(this,'q4','nothing')"><span class="dot"></span>Nothing</label>
+<label class="opt" onclick="pickAndNext(this,'q4','under_500')"><span class="dot"></span>Under $500</label>
+<label class="opt" onclick="pickAndNext(this,'q4','500_to_1000')"><span class="dot"></span>$500 - $1,000</label>
+<label class="opt" onclick="pickAndNext(this,'q4','1000_to_5000')"><span class="dot"></span>$1,000 - $5,000</label>
+<label class="opt" onclick="pickAndNext(this,'q4','over_5000')"><span class="dot"></span>Over $5,000</label>
+</div>
+</div></div>
+
+<!-- Step 5: Q5 -->
+<div class="step-page hidden" data-step="5"><div class="q-card-wrap">
+<label class="block text-base font-semibold mb-2 text-center">Do you have insurance?</label>
+<p class="text-[#666] text-xs text-center mb-5">Select all that apply, then tap Next</p>
+<div class="space-y-3" id="q5g">
 <label class="opt" onclick="chk(this,'renters')"><span class="chk"></span>Renters</label>
 <label class="opt" onclick="chk(this,'health')"><span class="chk"></span>Health</label>
 <label class="opt" onclick="chk(this,'auto')"><span class="chk"></span>Auto</label>
 <label class="opt" onclick="chk(this,'life')"><span class="chk"></span>Life</label>
 <label class="opt" onclick="chk(this,'none')"><span class="chk"></span>None of the above</label>
+</div>
+<button onclick="goStep(6)" class="w-full mt-5 py-3 rounded-xl text-sm font-semibold bg-accent text-white hover:bg-accent-light transition" style="box-shadow:0 0 20px rgba(147,51,234,.2)">Next &rarr;</button>
 </div></div>
 
-<div class="mb-10"><label class="block text-sm font-semibold mb-3">Q6: What's your biggest financial fear? <span class="text-[#666] font-normal">(optional)</span></label>
-<textarea id="q6" rows="3" placeholder="e.g. I am scared I will never own a home" class="w-full bg-[#0e0e0e] border border-[#1a1a1a] rounded-xl px-4 py-3 text-sm placeholder-[#444] focus:border-accent focus:outline-none transition resize-none"></textarea>
+<!-- Step 6: Q6 + Submit -->
+<div class="step-page hidden" data-step="6"><div class="q-card-wrap">
+<label class="block text-base font-semibold mb-2 text-center">What's your biggest financial fear?</label>
+<p class="text-[#666] text-xs text-center mb-5">Optional — helps us personalize your plan</p>
+<textarea id="q6" rows="4" placeholder="e.g. I am scared I will never own a home" class="w-full bg-[#0e0e0e] border border-[#1a1a1a] rounded-xl px-4 py-3 text-sm placeholder-[#444] focus:border-accent focus:outline-none transition resize-none mb-6"></textarea>
+<button onclick="submit()" class="w-full py-3.5 rounded-xl text-base font-semibold bg-accent text-white hover:bg-accent-light transition" style="box-shadow:0 0 30px rgba(147,51,234,.3)">Show me my plan &rarr;</button>
+</div></div>
+
 </div>
 
-<button id="submitBtn" disabled onclick="submit()" class="w-full py-3.5 rounded-xl text-base font-semibold transition disabled:opacity-30 disabled:cursor-not-allowed bg-accent text-white hover:bg-accent-light" style="box-shadow:0 0 30px rgba(147,51,234,.2)">Show me my plan</button>
+<!-- Back button -->
+<button id="backBtn" onclick="goStep(curStep-1)" class="hidden absolute top-1/2 -left-2 md:-left-12 -translate-y-1/2 w-8 h-8 rounded-full bg-[#111] border border-[#222] flex items-center justify-center text-[#888] hover:text-white hover:border-accent transition z-20">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+</button>
+
+<!-- Segmented progress bar -->
+<div class="mt-10 relative z-10">
+<div class="flex gap-1.5" id="progBar">
+<div class="prog-seg active"></div>
+<div class="prog-seg"></div>
+<div class="prog-seg"></div>
+<div class="prog-seg"></div>
+<div class="prog-seg"></div>
+<div class="prog-seg"></div>
+<div class="prog-seg"></div>
+</div>
+<div class="flex justify-between mt-2 text-[10px] text-[#555]">
+<span>You</span><span>Bank</span><span>Income</span><span>Debt</span><span>Savings</span><span>Insurance</span><span>Fear</span>
+</div>
+</div>
+
 </div>
 </div>
 
@@ -192,26 +258,53 @@ body{font-family:'Inter',sans-serif;background:#0a0a0a;color:#fff;overflow-x:hid
 const API='http://localhost:5000';
 const A={persona:null,q1:null,q2:null,q3:null,q4:null,q5:[],q6:''};
 let DATA=null,NET=null,NET2=null;
+let curStep=0;
+const TOTAL_STEPS=7;
 const CM={purple:'#9333ea',red:'#ef4444',green:'#22c55e',amber:'#eab308',info:'#9333ea',gray:'#666'};
 const CLABEL={purple:'Entry',red:'Risk',green:'Action',amber:'Resource',info:'Entry',gray:'Other'};
 
-// ─── Form ───────────────────────────────────────────────────────
-function sel(el,q,v){
+// ─── Wizard Step Control ────────────────────────────────────────
+let stepping=false;
+function goStep(n){
+if(n<0||n>=TOTAL_STEPS||stepping)return;
+stepping=true;
+// Hide current
+const cur=document.querySelector(`.step-page[data-step="${curStep}"]`);
+if(cur){cur.style.animation='stepOut .2s ease both';setTimeout(()=>{cur.classList.add('hidden');cur.style.animation=''},220)}
+// Show next
+curStep=n;
+setTimeout(()=>{
+const nxt=document.querySelector(`.step-page[data-step="${curStep}"]`);
+if(nxt){nxt.classList.remove('hidden');nxt.style.animation='stepIn .35s cubic-bezier(.16,1,.3,1) both'}
+document.getElementById('stepLabel').textContent=`Step ${curStep+1} of ${TOTAL_STEPS}`;
+document.getElementById('backBtn').classList.toggle('hidden',curStep===0);
+document.querySelectorAll('.prog-seg').forEach((s,i)=>{
+s.className='prog-seg'+(i<curStep?' done':i===curStep?' active':'');
+});
+stepping=false;
+},250);
+}
+
+// Pick answer and auto-advance (for radio questions)
+function pickAndNext(el,q,v){
 const grp=q==='persona'?'#personaGroup':('#'+q+'g');
 document.querySelectorAll(grp+' .opt').forEach(o=>o.classList.remove('selected'));
-el.classList.add('selected');A[q]=v;ud();
+el.classList.add('selected');
+A[q]=v;
+// Auto-advance after brief delay
+setTimeout(()=>goStep(curStep+1),350);
 }
+
+// Checkbox handler (Q5 — no auto-advance)
 function chk(el,v){
 el.classList.toggle('selected');
 if(v==='none'){A.q5=['none'];document.querySelectorAll('#q5g .opt').forEach(o=>o.classList.remove('selected'));el.classList.add('selected')}
 else{document.querySelector('#q5g .opt:last-child').classList.remove('selected');A.q5=A.q5.filter(x=>x!=='none');
 if(el.classList.contains('selected')){if(!A.q5.includes(v))A.q5.push(v)}else{A.q5=A.q5.filter(x=>x!==v)}}
-ud()}
-function ud(){
-const f=[A.persona,A.q1,A.q2,A.q3,A.q4,A.q5.length>0];
-document.querySelectorAll('.pdot').forEach((d,i)=>{d.className='pdot'+(i<6?(f[i]?' done':''):(f.every(Boolean)?' active':''))});
-document.getElementById('submitBtn').disabled=!f.every(Boolean);
 }
+
+// Legacy sel (kept for compatibility)
+function sel(el,q,v){pickAndNext(el,q,v)}
 
 // ─── Submit ─────────────────────────────────────────────────────
 async function submit(){
