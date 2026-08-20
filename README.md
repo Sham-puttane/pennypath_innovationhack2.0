@@ -4,6 +4,8 @@
 
 PennyPath is a financial wellness app that builds personalized, mathematically defensible financial plans for underserved populations, including gig workers, immigrants, the unbanked, veterans, single parents, and more. Built for the 'State Farm Financial Wellness track' at Innovation Hack 2026 at ASU.
 
+Try it out : https://pennypath-bice.vercel.app/
+
 ## What It Does
 
 1. User answers 8 intake questions about their financial situation
